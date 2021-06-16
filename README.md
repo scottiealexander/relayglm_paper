@@ -22,7 +22,7 @@ Run the following (you only need to do this ***ONCE***)
 # install dependencies (you only need to do this once)
 include("./install_dependencies.jl")
 
-# use of local Pkg environment / project is recommended, set to false to install
+# use of local Pkg environment / project is recommended, pass false to install
 # deps to the home project
 install_dependencies(true)
 ```
