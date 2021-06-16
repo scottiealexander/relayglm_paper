@@ -4,6 +4,8 @@ Code to recreate figures from [Dynamics of temporal integration in the lateral g
 
 ## Usage
 
+* This code requires [Julia](https://julialang.org/), if you do not already have Julia installed you can download it from [https://julialang.org/downloads/](https://julialang.org/downloads/). *
+    * **NOTE**: this code has only been only on Julia version 1.6.1, versions between 1.2.x and 1.6.1 *should* all work, they are, however, untested.
 * Download or clone code into a suitable location (we will refer to the path to the directory holding the code as `<code_dir>`)
 * Launch `julia`:
 
