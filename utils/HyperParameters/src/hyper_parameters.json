@@ -1,0 +1,462 @@
+{
+    "109": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 120,
+            "fb_temporal_span": 63
+        }
+    },
+    "217": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 642,
+            "fb_temporal_span": 259
+        }
+    },
+    "101": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 131,
+            "fb_temporal_span": 794
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 186,
+            "fb_temporal_span": 167
+        }
+    },
+    "2": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 103,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 169,
+            "fb_temporal_span": 111
+        }
+    },
+    "106": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 153,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 131,
+            "fb_temporal_span": 194
+        }
+    },
+    "111": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 114,
+            "fb_temporal_span": 570
+        }
+    },
+    "115": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 26,
+            "fb_temporal_span": 341
+        }
+    },
+    "213": {
+        "grating": {
+            "fb_nbasis": 56,
+            "ff_temporal_span": 43,
+            "fb_temporal_span": 788
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 153,
+            "fb_temporal_span": 109
+        }
+    },
+    "208": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 92,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 54,
+            "fb_temporal_span": 341
+        }
+    },
+    "214": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 87,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 43,
+            "fb_temporal_span": 258
+        }
+    },
+    "10": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 373,
+            "fb_temporal_span": 111
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 153,
+            "fb_temporal_span": 63
+        }
+    },
+    "215": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 549,
+            "fb_temporal_span": 270
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 92,
+            "fb_temporal_span": 194
+        }
+    },
+    "117": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 153,
+            "fb_temporal_span": 147
+        }
+    },
+    "204": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 76,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 59,
+            "fb_temporal_span": 341
+        }
+    },
+    "114": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 26,
+            "fb_temporal_span": 771
+        }
+    },
+    "5": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 114,
+            "fb_temporal_span": 788
+        }
+    },
+    "206": {
+        "grating": {
+            "fb_nbasis": 24,
+            "ff_temporal_span": 494,
+            "fb_temporal_span": 345
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 329,
+            "fb_temporal_span": 287
+        }
+    },
+    "205": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 208,
+            "fb_temporal_span": 264
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 224,
+            "fb_temporal_span": 172
+        }
+    },
+    "201": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 191,
+            "fb_temporal_span": 147
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 98,
+            "fb_temporal_span": 420
+        }
+    },
+    "112": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 461,
+            "fb_temporal_span": 385
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 202,
+            "fb_temporal_span": 63
+        }
+    },
+    "207": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 389,
+            "fb_temporal_span": 788
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 76,
+            "fb_temporal_span": 575
+        }
+    },
+    "202": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 65,
+            "fb_temporal_span": 341
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 54,
+            "fb_temporal_span": 341
+        }
+    },
+    "9": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 109,
+            "fb_temporal_span": 708
+        }
+    },
+    "12": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 65,
+            "fb_temporal_span": 194
+        }
+    },
+    "6": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 136,
+            "fb_temporal_span": 264
+        }
+    },
+    "216": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 98,
+            "fb_temporal_span": 558
+        }
+    },
+    "203": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 70,
+            "fb_temporal_span": 782
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 10,
+            "fb_temporal_span": 63
+        }
+    },
+    "104": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 70,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 26,
+            "fb_temporal_span": 111
+        }
+    },
+    "209": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 142,
+            "fb_temporal_span": 236
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 136,
+            "fb_temporal_span": 341
+        }
+    },
+    "110": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 43,
+            "fb_temporal_span": 111
+        }
+    },
+    "113": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 692,
+            "fb_temporal_span": 454
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 26,
+            "fb_temporal_span": 63
+        }
+    },
+    "7": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 125,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 142,
+            "fb_temporal_span": 341
+        }
+    },
+    "8": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 92,
+            "fb_temporal_span": 63
+        }
+    },
+    "107": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 43,
+            "fb_temporal_span": 194
+        }
+    },
+    "102": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 252,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 125,
+            "fb_temporal_span": 63
+        }
+    },
+    "4": {
+        "grating": {
+            "fb_nbasis": 16,
+            "ff_temporal_span": 92,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 87,
+            "fb_temporal_span": 63
+        }
+    },
+    "212": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 329,
+            "fb_temporal_span": 111
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 142,
+            "fb_temporal_span": 111
+        }
+    },
+    "210": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 32,
+            "fb_temporal_span": 788
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 66,
+            "fb_temporal_span": 63
+        }
+    },
+    "11": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 472,
+            "fb_temporal_span": 111
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 180,
+            "fb_temporal_span": 224
+        }
+    },
+    "211": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 70,
+            "fb_temporal_span": 147
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 103,
+            "fb_temporal_span": 111
+        }
+    },
+    "108": {
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 158,
+            "fb_temporal_span": 121
+        }
+    },
+    "116": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 257,
+            "fb_temporal_span": 449
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 32,
+            "fb_temporal_span": 111
+        }
+    },
+    "103": {
+        "grating": {
+            "fb_nbasis": 24,
+            "ff_temporal_span": 153,
+            "fb_temporal_span": 794
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 120,
+            "fb_temporal_span": 147
+        }
+    },
+    "105": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 131,
+            "fb_temporal_span": 194
+        },
+        "msequence": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 120,
+            "fb_temporal_span": 368
+        }
+    },
+    "3": {
+        "grating": {
+            "fb_nbasis": 8,
+            "ff_temporal_span": 43,
+            "fb_temporal_span": 341
+        }
+    }
+}
