@@ -126,3 +126,13 @@ d = FigureS3.collate_data()
 FigureS3.make_figure(d)
 
 ```
+
+## Dependencies
+
+The non-registered dependencies on which this code relies are automatically installed by the script `install_dependencies.jl` (see instructions above). Their code can be found at:
+* [RelayGLM.jl](https://github.com/scottiealexander/RelayGLM.jl.git)
+* [PairsDB.jl](https://github.com/scottiealexander/PairsDB.jl.git)
+
+## License
+
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
