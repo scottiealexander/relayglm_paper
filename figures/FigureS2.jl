@@ -1,7 +1,7 @@
 module FigureS2
 
 using PyPlot, Plot, Statistics, SimpleStats, SimpleFitting, UCDColors, Printf
-using GAPlot, PairsDB, RelayGLM
+using GAPlot, DatabaseWrapper, RelayGLM
 import PaperUtils, Figure45
 # ============================================================================ #
 @enum SpikeType AllSpikes TriggeredSpikes

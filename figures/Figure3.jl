@@ -1,15 +1,17 @@
 module Figure3
 
-using PaperUtils, PairsDB, RelayGLM, Progress
+using PaperUtils, DatabaseWrapper, RelayGLM, Progress
 using Plot, UCDColors
 
 using Statistics, PyPlot, ColorTypes
+
+const Strmbol = Union{String,Symbol}
 
 # ============================================================================ #
 function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime::Real=0.1)
 
     d = Dict{String, Any}()
-    tmp = Dict{String,String}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence")
+    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
 
     ffspan = 200
     fbspan = 200
@@ -20,7 +22,7 @@ function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime
         db = get_database(ptrn, id -> !in(id, PaperUtils.EXCLUDE[type]))
 
         d[type] = Dict{String, Any}()
-        d[type]["ids"] = first.(db)
+        d[type]["ids"] = get_ids(db)
         d[type]["xf"] = Matrix{Float64}(undef, ffspan, length(db))
         d[type]["xse"] = Matrix{Float64}(undef, ffspan, length(db))
         d[type]["hf"] = Matrix{Float64}(undef, fbspan, length(db))
@@ -29,7 +31,7 @@ function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime
         for k in 1:length(db)
 
             ret, lgn, _, _ = get_data(db, k)
-            id = first(db[k])
+            id = get_id(db[k])
 
             res = run_one(ret, lgn,
                 ffspan, # ff span
@@ -42,7 +44,7 @@ function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime
             )
 
             if !res.converged
-                @warn("Pair $(first(db[k])) [$(type)] failed to converge")
+                @warn("Pair $(id) [$(type)] failed to converge")
             end
 
             d[type]["xf"][:,k] = get_coef(res, :ff)
@@ -59,7 +61,7 @@ function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime
     return d
 end
 # ============================================================================ #
-function make_figure(d::Dict{String,Any}, ex_id::Integer=208; io::IO=stdout)
+function make_figure(d::Dict{String,Any}, ex_id::Integer=208, awake_id::Integer=200205270; io::IO=stdout)
 
     h = figure()
     h.set_size_inches((10,7.5))
@@ -73,25 +75,32 @@ function make_figure(d::Dict{String,Any}, ex_id::Integer=208; io::IO=stdout)
 
     foreach(default_axes, ax)
 
-    names = Dict("msequence"=>"Binary white noise", "grating"=>"Gratings")
-    colors = Dict("msequence"=>BLUE, "grating"=>RED)
+    names = Dict("msequence"=>"Binary white noise", "grating"=>"Gratings", "awake"=>"Awake")
+    colors = Dict("msequence"=>BLUE, "grating"=>RED, "awake"=>GOLD)
 
     t_xf = range(-0.2, -0.001, length=200)
     t_hf = range(-0.2, -0.001, length=200)
 
-    for type in ["msequence", "grating"]
-        k = findfirst(isequal(ex_id), d[type]["ids"])
+    for type in ["msequence", "grating", "awake"]
+
+        if type == "awake"
+            k = findfirst(isequal(awake_id), d[type]["ids"])
+        else
+            k = findfirst(isequal(ex_id), d[type]["ids"])
+        end
+
+        id = string(d[type]["ids"][k])
 
         # example pair CH-retina plot
         y = PaperUtils.normalize(d[type]["xf"][:,k])
         se = d[type]["xse"][:,k]
-        ax[1].plot(t_xf, y, linewidth=3, color=colors[type], label=names[type])
+        ax[1].plot(t_xf, y, linewidth=3, color=colors[type], label=names[type] * " ($(id))")
         ax[1].plot([t_xf[1], -.001], [0,0], ":", color="gray", linewidth=2)
 
         # example pair CH-LGN plot
         y = PaperUtils.normalize(d[type]["hf"][:,k])
         se = d[type]["hse"][:,k]
-        ax[2].plot(t_hf, y, linewidth=3, color=colors[type], label=names[type])
+        ax[2].plot(t_hf, y, linewidth=3, color=colors[type], label=names[type] * " ($(id))")
         ax[2].plot([t_hf[1], -.001], [0,0], ":", color="gray", linewidth=2)
 
         N = size(d[type]["xf"], 2)
@@ -109,19 +118,19 @@ function make_figure(d::Dict{String,Any}, ex_id::Integer=208; io::IO=stdout)
         ax[4].plot([t_hf[1], -.001], [0,0], ":", color="gray", linewidth=2)
     end
 
-    ax[1].set_title("CH-retinal: Pair ID $(ex_id)", fontsize=16)
+    ax[1].set_title("CH-retinal: examples", fontsize=16)
 
     ax[3].set_title("CH-retinal: Population", fontsize=16)
 
     ax[1].set_ylim(-0.22, 0.55)
-    ax[2].set_ylim(-0.22, 0.55)
+    # ax[2].set_ylim(-0.22, 0.55)
     ax[2].set_yticklabels([])
-    ax[2].set_title("CH-LGN: Pair ID $(ex_id)", fontsize=16)
+    ax[2].set_title("CH-LGN: examples", fontsize=16)
 
     yt = ax[3].get_yticks()
 
     ax[3].set_ylim(-0.15, 0.4)
-    ax[4].set_ylim(-0.15, 0.4)
+    # ax[4].set_ylim(-0.15, 0.4)
     ax[4].set_yticklabels([])
     ax[4].set_title("CH-LGN: Population", fontsize=16)
 

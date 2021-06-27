@@ -1,8 +1,10 @@
 module Figure45
 
-using GAPlot, Plot, UCDColors, SimpleStats, PairsDB, RelayGLM, Progress
+using GAPlot, Plot, UCDColors, SimpleStats, DatabaseWrapper, RelayGLM, Progress
 using RelayGLM.RelayISI, PaperUtils, HyperParameters
 using LinearAlgebra, Statistics, PyPlot, ColorTypes, Bootstrap, Printf
+
+const Strmbol = Union{String,Symbol}
 
 # ============================================================================ #
 function collate_data(::Type{T}) where T <: RelayGLM.PerformanceMetric
@@ -11,7 +13,7 @@ function collate_data(::Type{T}) where T <: RelayGLM.PerformanceMetric
     mxisi = roundn.(10.0 .^ range(log10(0.03), log10(0.5), length=8), -3)
 
     d = Dict{String, Any}()
-    tmp = Dict{String,String}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence")
+    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
     par = HyperParameters.load_parameters()
 
     key = RelayGLM.key_name(T)
@@ -23,7 +25,7 @@ function collate_data(::Type{T}) where T <: RelayGLM.PerformanceMetric
 
         d[type][key] = Dict{String, Any}()
 
-        d[type]["ids"] = first.(db)
+        d[type]["ids"] = get_ids(db)
 
         d[type][key]["ff"] = init_output(T, length(db))
         d[type][key]["fb"] = init_output(T, length(db))
@@ -35,7 +37,7 @@ function collate_data(::Type{T}) where T <: RelayGLM.PerformanceMetric
         for k in 1:length(db)
 
             ret, lgn, _, _ = get_data(db, k)
-            id = first(db[k])
+            id = get_id(db[k])
 
             ff, fb = run_one(T, ret, lgn,
                 par[id][type]["ff_temporal_span"], # ff span
@@ -45,11 +47,11 @@ function collate_data(::Type{T}) where T <: RelayGLM.PerformanceMetric
             )
 
             if !ff.converged
-                @warn("Pair $(first(db[k])) [$(type)] failed to converge: FF")
+                @warn("Pair $(id) [$(type)] failed to converge: FF")
             end
 
             if !fb.converged
-                @warn("Pair $(first(db[k])) [$(type)] failed to converge: FR")
+                @warn("Pair $(id) [$(type)] failed to converge: FR")
             end
 
             d[type][key]["ff"][k] = mean(ff.metric)

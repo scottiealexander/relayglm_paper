@@ -1,6 +1,6 @@
 module Figure6
 
-using PairsDB, RelayGLM, Progress, SpkCore, SimpleStats
+using DatabaseWrapper, RelayGLM, Progress, SpkCore, SimpleStats
 using PaperUtils, UCDColors, Plot, GAPlot
 using Statistics, Printf, Bootstrap, PyPlot, ColorTypes, KernelDensity, StatsBase
 

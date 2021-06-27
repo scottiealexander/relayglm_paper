@@ -1,7 +1,7 @@
 module Figure1
 
 using PaperUtils
-using PairsDB, SpkTuning, SpkCore, Plot, UCDColors, MSequenceUtils, MSequence
+using DatabaseWrapper, SpkTuning, SpkCore, Plot, UCDColors, MSequenceUtils, MSequence
 using Statistics, PyPlot, Printf, ImageFiltering
 
 # ============================================================================ #
@@ -69,7 +69,7 @@ function collate_data(id::Integer=214, normalize::Bool=true)
     return d
 end
 # ============================================================================ #
-function make_figure(d::Dict{String,Any}, id::Integer=214, io::IO=stdout)
+function make_figure(d::Dict{String,Any}, id::Integer=-1, io::IO=stdout)
 
     h = figure()
     h.set_size_inches((9.5,8.5))

@@ -10,7 +10,7 @@ export get_ef, get_asterix, normalize, rate_split, median_split, quantile_groups
 export axes_position, axes_layout
 export correlation, count_relayed, contribution, roundn, filter_ci
 
-const EXCLUDE = Dict{String,Vector{Int}}("grating"=>[115], "msequence"=>Int[101,103])
+const EXCLUDE = Dict{String,Vector{Int}}("grating"=>[115], "msequence"=>[101,103], "awake"=>Int[])
 
 # ---------------------------------------------------------------------------- #
 function roundn(x::Real, n::Integer)

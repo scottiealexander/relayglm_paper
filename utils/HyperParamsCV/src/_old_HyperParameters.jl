@@ -1,11 +1,13 @@
 module HyperParameters
 
 using PaperUtils
-using PairsDB, RelayGLM, Progress
+using DatabaseWrapper, RelayGLM, Progress
 
 using Statistics, Optim, Dates, JSON
 
 export FFSpan, FBSpan, FBBasis
+
+const Strmbol = Union{String,Symbol}
 
 const DBFILE = joinpath(@__DIR__, "hyper_parameters.json")
 const NSPAN = 10
@@ -227,13 +229,13 @@ function collate_data(typ::ParamType, bin_size::Real=0.001)
     param = load_parameters()
 
     d = Dict{String, Any}()
-    tmp = Dict{String,String}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence")
+    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
 
     for (type, ptrn) in tmp
 
         db = get_database(ptrn, id -> !in(id, EXCLUDE[type]))
         d[type] = Dict{String, Any}()
-        d[type]["ids"] = first.(db)
+        d[type]["ids"] = get_ids(db)
         d[type]["roca"] = zeros(len, length(db))
         d[type]["jsd"] = zeros(len, length(db))
         d[type]["nlli"] = zeros(len, length(db))
