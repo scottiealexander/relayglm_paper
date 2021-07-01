@@ -1,7 +1,7 @@
 module Figure45
 
 using GAPlot, Plot, UCDColors, SimpleStats, DatabaseWrapper, RelayGLM, Progress
-using RelayGLM.RelayISI, PaperUtils, HyperParameters
+using RelayGLM.RelayISI, PaperUtils, HyperParamsCV
 using LinearAlgebra, Statistics, PyPlot, ColorTypes, Bootstrap, Printf
 
 const Strmbol = Union{String,Symbol}
@@ -14,7 +14,7 @@ function collate_data(::Type{T}) where T <: RelayGLM.PerformanceMetric
 
     d = Dict{String, Any}()
     tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
-    par = HyperParameters.load_parameters()
+    par = HyperParamsCV.load_parameters()
 
     key = RelayGLM.key_name(T)
 
@@ -73,12 +73,9 @@ end
 # ============================================================================ #
 function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
 
-    names = [("isi", "ISI model"), ("ff", "Retinal\nmodel"), ("fb", "Combined\nmodel")]
+    names = [("isi", "ISI model"), ("ff", "Retinal\nmodel"), ("fr", "Combined\nmodel")]
     colors = [GOLD, GREEN, PURPLE]
     idx = [(1,2), (1,3), (2,3)]
-
-    denom = metric == "jsd" ? log(2.0) : 1.0
-    km = metric == "jsd" ? 1 : 0
 
     # ------------------------------------------------------------------------ #
     # Figure 4
@@ -95,18 +92,18 @@ function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
     ax2 = reshape(tmp[[1,4,2,5,3,6]], 2, 3)
     foreach(default_axes, ax2)
 
-    exclude = [108, 210]
+    exclude = Int[] #[108, 210]
 
     println(io, "*"^80)
     println(io, "MSEQUENCE:")
     for k in eachindex(idx)
         k1, k2 = idx[k]
-        d1 = data(d["msequence"], metric, names[k1][1], km, exclude)
-        d2 = data(d["msequence"], metric, names[k2][1], km, exclude)
-        v, lo, hi = GAPlot.cumming_plot(d1 ./ denom, d2 ./ denom, ax=ax2[:,k], colors=colors[[k1,k2]], dcolor=BLUE)
-        _, p = SimpleStats.paired_permutation_test(median, d1 ./ denom, d2 ./ denom)
+        d1 = data(d["msequence"], metric, names[k1][1], exclude)
+        d2 = data(d["msequence"], metric, names[k2][1], exclude)
+        v, lo, hi = GAPlot.cumming_plot(d1, d2, ax=ax2[:,k], colors=colors[[k1,k2]], dcolor=BLUE)
+        _, p = SimpleStats.paired_permutation_test(median, d1, d2)
 
-        er = mad((d1 ./ denom) .- (d2 ./ denom))
+        er = mad(d1 .- d2)
 
         ax2[1,k].set_xticklabels([names[k1][2], names[k2][2]], fontsize=12)
 
@@ -168,12 +165,12 @@ function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
     println(io, "GRATINGS:")
     for k in eachindex(idx)
         k1, k2 = idx[k]
-        d1 = data(d["grating"], metric, names[k1][1], km)
-        d2 = data(d["grating"], metric, names[k2][1], km)
-        v, lo, hi = GAPlot.cumming_plot(d1./ denom, d2 ./ denom, ax=ax3[:,k], colors=colors[[k1,k2]], dcolor=RED)
-        _, p = SimpleStats.paired_permutation_test(median, d1 ./ denom, d2 ./ denom)
+        d1 = data(d["grating"], metric, names[k1][1])
+        d2 = data(d["grating"], metric, names[k2][1])
+        v, lo, hi = GAPlot.cumming_plot(d1, d2, ax=ax3[:,k], colors=colors[[k1,k2]], dcolor=RED)
+        _, p = SimpleStats.paired_permutation_test(median, d1, d2)
 
-        er = mad((d1 ./ denom) .- (d2 ./ denom))
+        er = mad(d1 .- d2)
 
         ax3[1,k].set_xticklabels([names[k1][2], names[k2][2]], fontsize=12)
 
@@ -248,13 +245,9 @@ end
 init_output(::Type{JSDivergence}, n::Integer) = Vector{Tuple{Float64,Float64}}(undef, n)
 init_output(::Type{<:RelayGLM.PerformanceMetric}, n::Integer) = Vector{Float64}(undef, n)
 # ============================================================================ #
-function data(d::Dict, metric::String, typ::String, idx::Integer, exc::Vector{Int}=Int[])
+function data(d::Dict, metric::String, typ::String, exc::Vector{Int}=Int[])
 
-    if idx < 1
-        out = d[metric][typ]
-    else
-        out = getfield.(d[metric][typ], idx)
-    end
+    out = d[metric][typ]
 
     if isempty(exc)
         keep = 1:length(out)

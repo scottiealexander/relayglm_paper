@@ -8,6 +8,7 @@ using RelayGLM.RelayUtils
 import Distributions
 import Dates
 
+const Strmbol = Union{String,Symbol}
 const FFSPAN = 200
 
 # ============================================================================ #
@@ -19,10 +20,11 @@ which LGN spikes are counted for partitioning
 """
 function collate_data(::Type{T}, twin::Real=0.1) where T <: RelayGLM.PerformanceMetric
 
+    NQUARTILE = 3
     bin_size = 0.001
 
     d = Dict{String, Any}()
-    tmp = Dict{String,String}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence")
+    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
 
     key = RelayGLM.key_name(T)
 
@@ -33,9 +35,9 @@ function collate_data(::Type{T}, twin::Real=0.1) where T <: RelayGLM.Performance
         end
         db = get_database(ptrn, id -> !in(id, exc))
         d[type] = Dict{String, Any}()
-        d[type]["ids"] = first.(db)
+        d[type]["ids"] = get_ids(db)
 
-        for q in 1:4
+        for q in 1:NQUARTILE
             name = "q" * string(q)
             d[type]["xf_" * name] = Matrix{Float64}(undef, FFSPAN, length(db))
             d[type]["efficacy_" * name] = Vector{Float64}(undef, length(db))
@@ -57,7 +59,7 @@ function collate_data(::Type{T}, twin::Real=0.1) where T <: RelayGLM.Performance
 
             kq = rate_split(ret, lgn, round(Int, twin / bin_size))
 
-            for q in 1:4
+            for q in 1:NQUARTILE
                 name = "q" * string(q)
                 kspk = kq[q]
                 ef, cn, nret, nlgn = stats(ret, lgn, kspk, FFSPAN)
@@ -84,20 +86,23 @@ end
 # ============================================================================ #
 function make_figure(d; show_inset::Bool=true, color_scheme::String="grwhpu", io::IO=stdout)
 
-    h = figure()
-    h.set_size_inches((9,9.5))
+    N = length(filter(x->match(r"xf_q\d", x) != nothing, keys(d["grating"])))
 
-    rh = [1.0, 0.33, 1.0, 0.33]
-    rs = [0.1, 0.025, 0.15, 0.025, 0.06]
+    h = figure()
+    h.set_size_inches((9,10.0))
+
+    rh = [1.0, 0.33, 1.0, 0.33, 1.0, 0.33]
+    rs = [0.09, 0.025, 0.15, 0.025, 0.15, 0.025, 0.06]
     cw = [1.0, 1.0]
     cs = [0.1, 0.12, 0.03]
 
     ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
-    foreach(x->x.remove(), ax[[3,7]])
+    foreach(x->x.remove(), ax[[3,7,11]])
     bottom_align(ax[1], ax[4])
     bottom_align(ax[5], ax[8])
+    bottom_align(ax[9], ax[12])
 
-    deleteat!(ax, [3, 7])
+    deleteat!(ax, [3, 7, 11])
 
     foreach(default_axes, ax)
 
@@ -109,89 +114,100 @@ function make_figure(d; show_inset::Bool=true, color_scheme::String="grwhpu", io
     elseif color_scheme == "grwhpu"
         col = [GREEN, LIGHTGREEN, LIGHTPURPLE, PURPLE]
     elseif color_scheme == "full"
-        col = [GREEN, ORANGE, GOLD, PURPLE]
+        # col = [GREEN, ORANGE, GOLD, PURPLE]
+        col = [GREEN, [.3, .3, .3], PURPLE]
     else
         error(color_scheme * " is not a valid color scheme")
     end
 
-    if show_inset
-        sax1 = add_subplot_axes(ax[1], [0.35, 0.45, 0.35, 0.55])
-        sax2 = add_subplot_axes(ax[4], [0.35, 0.45, 0.35, 0.55])
-        sax = [sax1, sax2]
-        foreach(sax) do cax
-            default_axes(cax)
-            cax.set_yticklabels([])
-            ki = length(t)-30
-            cax.plot([t[ki], t[end]], [0,0], "--", color="black", linewidth=1)
-            cax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.5))
-        end
+    xmn, xmx = N == 4 ? (-1.5, 8.0) : (-1.0, 5.5)
+    foreach(x->x.set_xlim(xmn, xmx), ax[[2,3,5,6,8,9]])
+
+    titles = ["Binary white noise", "Gratings", "Awake"]
+    title_color = [BLUE, RED, GOLD]
+    if N == 4
+        xv = [0.0, 2.25, 4.0, 6.25]
     else
-        sax = []
+        xv = [0.0, 2.0, 4.0]
     end
-
-    xmn, xmx = -1.5, 8.0
-    ax[2].set_xlim(xmn, xmx)
-    ax[3].set_xlim(xmn, xmx)
-
-    ax[5].set_xlim(xmn, xmx)
-    ax[6].set_xlim(xmn, xmx)
-
-    titles = ["Binary white noise", "Gratings"]
-    title_color = [BLUE, RED]
-    xv = [0, 2.25, 4, 6.25]
     inset_length = show_inset ? 30 : 0
 
-    for (k,typ) in enumerate(["msequence", "grating"])
+    for (k,typ) in enumerate(["msequence", "grating", "awake"])
+
         kax = (k-1)*3+1
-        ax[kax].plot([t[1], t[end]], [0,0], "--", color="black", linewidth=2)
-        mn = +Inf
-        mx = -Inf
-        for q in 1:4
-            name = "q" * string(q)
-            mnt, mxt = filter_plot(d, t, typ, name, ax[kax], sax[k], col[q], inset_length)
-
-            mn = min(mn, mnt)
-            mx = max(mx, mxt)
-
-            Plot.swarmplot(d[typ]["rri_"*name], xv[q], ax=ax[kax+1], markersize=14, color=col[q], xs=0.7, ys=0.1)
-
-            bs = bmedian(d[typ]["rri_"*name])
-            GAPlot.distribution(bs, ax[kax+2], x=xv[q], draw_axis=false, color=col[q], peak=1.2, sep=0.17)
-            ax[kax+2].plot([xmn, xmx], [0,0], "--", linewidth=1, color="gray", alpha=0.75)
-        end
-
-        if show_inset
-            inset_box(t, mn, mx, ax[kax], inset_length)
-        end
+        plot_one(d, typ, ax[kax:kax+2], col, xmn, xmx, xv, inset_length=inset_length, yloc=0.1)
 
         if k == 1
             ax[kax].legend(frameon=false, fontsize=14, loc="upper left")
         end
 
-        format_filter_plot(ax[kax])
+        format_filter_plot(ax[kax], 0.1)
 
         ax[kax+1].set_xticks(xv)
         ax[kax+1].set_xticklabels([])
         ax[kax+1].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.1))
         ax[kax+1].set_ylabel(L"\mathcal{I}_{Bernoulli}", fontsize=14)
 
-        ax[kax+2].set_ylim(-0.02, 0.2)
+        ymx = max(0.2, ax[kax+2].get_ylim()[2])
+        yts = ymx <= 0.5 ? 0.1 : 0.3
+        ax[kax+2].set_ylim(-0.02, ymx)
         ax[kax+2].set_xticks(xv)
-        ax[kax+2].set_xticklabels(["Q1", "Q2", "Q3", "Q4"], fontsize=14)
-        ax[kax+2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.1))
+        ax[kax+2].set_xticklabels(map(x->"Q"*string(x), 1:N), fontsize=14)
+        ax[kax+2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(yts))
         ax[kax+2].set_ylabel("Median\n\$\\mathcal{I}_{Bernoulli}\$", fontsize=14)
     end
 
-    labels = ["A","B","C","D"]
+    labels = ["A","B","C","D","E","F"]
 
-    for (k, label) in zip([1,2,4,5], labels)
+    for (k, label) in zip([1,2,4,5,7,8], labels)
         Plot.axes_label(h, ax[k], label)
     end
 
-    h.text(0.5, 0.995, "Binary white noise", fontsize=24, color=BLUE, horizontalalignment="center", verticalalignment="top")
-    h.text(0.5, 0.495, "Gratings", fontsize=24, color=RED, horizontalalignment="center", verticalalignment="top")
+    h.text(0.5, 0.997, "Binary white noise", fontsize=24, color=BLUE, horizontalalignment="center", verticalalignment="top")
+    h.text(0.5, 0.667, "Gratings", fontsize=24, color=RED, horizontalalignment="center", verticalalignment="top")
+    h.text(0.5, 0.334, "Awake", fontsize=24, color=GOLD, horizontalalignment="center", verticalalignment="top")
 
     return h
+end
+# ============================================================================ #
+function plot_one(d, typ, ax, colors, xmn, xmx, xv; inset_length::Integer=30, yloc::Real=0.5)
+
+    len = size(d[typ]["xf_q1"], 1)
+    t = range(-len*0.001, -0.001, length=len)
+
+    N = length(filter(x->match(r"xf_q\d", x) != nothing, keys(d[typ])))
+
+    if inset_length > 0
+        sax = add_subplot_axes(ax[1], [0.35, 0.45, 0.35, 0.55])
+        default_axes(sax)
+        sax.set_yticklabels([])
+        ki = length(t)-inset_length
+        sax.plot([t[ki], t[end]], [0,0], "--", color="black", linewidth=1)
+        sax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(yloc))
+    end
+
+    ax[1].plot([t[1], t[end]], [0,0], "--", color="black", linewidth=2)
+
+    mn = +Inf
+    mx = -Inf
+    for q in 1:N
+        name = "q" * string(q)
+        mnt, mxt = filter_plot(d, t, typ, name, ax[1], sax, colors[q], inset_length)
+
+        mn = min(mn, mnt)
+        mx = max(mx, mxt)
+
+        Plot.swarmplot(d[typ]["rri_"*name], xv[q], ax=ax[2], markersize=14, color=colors[q], xs=0.7, ys=0.1)
+
+        bs = bmedian(d[typ]["rri_"*name])
+        GAPlot.distribution(bs, ax[3], x=xv[q], draw_axis=false, color=colors[q], peak=1.2, sep=0.17)
+        ax[3].plot([xmn, xmx], [0,0], "--", linewidth=1, color="gray", alpha=0.75)
+    end
+
+    if inset_length > 0
+        inset_box(t, mn, mx, ax[1], inset_length)
+    end
+
 end
 # ============================================================================ #
 function inset_box(t::AbstractVector{<:Real}, mn::Real, mx::Real, ax, inset_length)
@@ -205,7 +221,7 @@ function inset_box(t::AbstractVector{<:Real}, mn::Real, mx::Real, ax, inset_leng
 end
 # ============================================================================ #
 function filter_plot(d::Dict{String,Any}, t::AbstractVector{<:Real}, typ, name, ax, sax, col, inset_length)
-    val, lo, hi = filter_ci(d[typ]["xf_"*name])
+    val, lo, hi = filter_ci(PaperUtils.normalize(d[typ]["xf_"*name]))
     plot_with_error(t, val, lo, hi, RGB(col...), ax, linewidth=3, label=uppercase(name), ferr=5.0)
 
     mn = 0
@@ -220,11 +236,11 @@ function filter_plot(d::Dict{String,Any}, t::AbstractVector{<:Real}, typ, name, 
     return mn, mx
 end
 # ============================================================================ #
-function format_filter_plot(ax)
+function format_filter_plot(ax, yloc::Real=0.5)
     ax.set_xlabel("Time before spike (seconds)", fontsize=14)
     ax.set_ylabel("Filter weight (A.U.)", fontsize=14)
     ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.05))
-    ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.5))
+    # ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.5))
 end
 # ============================================================================ #
 function run_one(::Type{T}, kuse::AbstractVector{<:Integer}, ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, bin_size::Real) where T <: RelayGLM.PerformanceMetric
@@ -246,7 +262,8 @@ end
 function rate_split(ret::Vector{Float64}, lgn::Vector{Float64}, kwin::Integer)
     p, _ = psth(lgn, ret, -(kwin + 1):-1, 0.001)
     fr = vec(sum(p, dims=1))
-    return quantile_groups(fr, [0.25, 0.5, 0.75])
+    # return quantile_groups(fr, [0.25, 0.5, 0.75])
+    return quantile_groups(fr, [0.334, 0.667])
 end
 # ============================================================================ #
 function stats(ret::Vector{Float64}, lgn::Vector{Float64}, kidx::Vector{Int}, win::Integer=FFSPAN)
