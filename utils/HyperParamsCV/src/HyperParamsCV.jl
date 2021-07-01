@@ -9,8 +9,10 @@ import RelayGLM.GLMFit.GLMModels
 import RelayGLM.GLMFit.Partitions
 
 using LinearAlgebra, Statistics
+import JSON
 
 const Strmbol = Union{String,Symbol}
+const DBFILE = joinpath(@__DIR__, "hyper_parameters.json")
 
 # ============================================================================ #
 function train_isi_model(isi::AbstractVector{<:Real}, status::AbstractVector{<:Real},
@@ -386,7 +388,7 @@ function collate_data(iids::AbstractVector{<:Integer}=Int[])
             id = ids[k]
 
             ret, lgn, _, _ = get_data(db, id=id)
-            res_isi, res_ff, res_fr, sigma, isimaxes, span_ff, lm_ff, span_fr, nb_fr, lm_fr = nested_cv(ret, lgn, id, type, 10, true)
+            res_isi, res_ff, res_fr, sigma, isimaxes, span_ff, lm_ff, span_fr, nb_fr, lm_fr = nested_cv(ret, lgn, id, type, nfold, true)
 
             d[type][id]["isi"]["sigma"] = Vector{Float64}(sigma)
             d[type][id]["isi"]["isimax"] = Vector{Float64}(isimaxes)
@@ -411,49 +413,93 @@ function collate_data(iids::AbstractVector{<:Integer}=Int[])
     return d
 end
 # ============================================================================ #
-function merge_dicts(data::Vector{<:Dict})
-    out = Dict{String,Any}()
-    for typ in ["grating", "msequence"]
+function merge_dicts(data::Vector{<:Dict}, fields::Vector{String}=["isi","ff","fr"]; force::Bool=false)
+    return merge_dicts!(Dict{String,Any}(), data, fields; force=force)
+end
+# ============================================================================ #
+function merge_dicts!(out::Dict{String,<:Any}, data::Vector{<:Dict}, fields::Vector{String}=["isi","ff","fr"]; force::Bool=false)
+    for typ in sort(collect(keys(data[1])))
         ids = Vector{Int}(undef, 0)
         for d in data
             append!(ids, keys(d[typ]))
         end
-        out[typ] = Dict{String,Any}()
-        out[typ]["ids"] = sort(ids)
-        out[typ]["rri"] = Dict{String,Any}()
-        out[typ]["rri"]["isi"] = zeros(length(ids))
-        out[typ]["rri"]["ff"] = zeros(length(ids))
-        out[typ]["rri"]["fr"] = zeros(length(ids))
+        if force || !haskey(out, typ)
+            out[typ] = Dict{String,Any}()
+        end
+        if force || !haskey(out[typ], "ids")
+            out[typ]["ids"] = sort(ids)
+        end
+        if force || !haskey(out[typ], "rri")
+            out[typ]["rri"] = Dict{String,Any}()
+        end
+
+        for field in fields
+            if force || !haskey(out[typ]["rri"], field)
+                out[typ]["rri"][field] = zeros(length(ids))
+            end
+        end
 
         for d in data
             for id in keys(d[typ])
                 k = findfirst(isequal(id), out[typ]["ids"])
                 k == nothing && error("Failded to locate id $(id) in type $(typ)")
-                out[typ]["rri"]["isi"][k] = mean(d[typ][id]["isi"]["rri"])
-                out[typ]["rri"]["ff"][k] = mean(d[typ][id]["ff"]["rri"])
-                out[typ]["rri"]["fr"][k] = mean(d[typ][id]["fr"]["rri"])
+                for field in fields
+                    out[typ]["rri"][field][k] = mean(d[typ][id][field]["rri"])
+                end
             end
         end
     end
     return out
 end
 # ============================================================================ #
-function merge_dicts2(data::Vector{<:Dict}, out::Dict{String,Any}, field::String)
-    for typ in ["grating", "msequence"]
-        ids = Vector{Int}(undef, 0)
-        for d in data
-            append!(ids, keys(d[typ]))
+function parameter_dict(data::Vector{Dict{String,Any}})
+    out = Dict{Int,Any}()
+    return parameter_dict!(out, data)
+end
+# ============================================================================ #
+function parameter_dict!(out::Dict{Int,Any}, data::Vector{Dict{String,Any}})
+    all_ids = Vector{Int}(undef, 0)
+    for d in data
+        for k in keys(d)
+            append!(all_ids, keys(d[k]))
         end
+    end
+    ids = sort(unique(all_ids))
 
-        for d in data
+    for d in data
+        for typ in keys(d)
             for id in keys(d[typ])
-                k = findfirst(isequal(id), out[typ]["ids"])
-                k == nothing && error("Failded to locate id $(id) in type $(typ)")
-                out[typ]["rri"][field][k] = mean(d[typ][id][field]["rri"])
+                if !haskey(out, id)
+                    out[id] = Dict{String,Any}()
+                end
+                if !haskey(out[id], typ)
+                    out[id][typ] = Dict{String,Any}()
+                end
+
+                out[id][typ]["ff_temporal_span"] = median(d[typ][id]["ff"]["span"])
+                out[id][typ]["fb_temporal_span"] = median(d[typ][id]["fr"]["span"])
+                out[id][typ]["fb_nbasis"] = median(d[typ][id]["fr"]["nbasis"])
             end
         end
     end
     return out
+end
+# ============================================================================ #
+function write_parameters(data::Vector{Dict{String,Any}}, ofile::String=DBFILE)
+    save_parameters(parameter_dict(data), ofile)
+end
+# ============================================================================ #
+function save_parameters(d::Dict{Int,Any}, ofile::String=DBFILE)
+    tmp = Dict{String,Dict{String,Any}}((string(k) => v for (k,v) in d))
+    open(ofile, "w") do io
+        JSON.print(io, tmp, 4)
+    end
+    return ofile
+end
+# ============================================================================ #
+function load_parameters(ifile::String=DBFILE)
+    d = open(JSON.parse, ifile, "r")
+    return Dict((parse(Int, k) => v for (k,v) in d))
 end
 # ============================================================================ #
 end
