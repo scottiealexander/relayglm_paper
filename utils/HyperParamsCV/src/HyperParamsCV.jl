@@ -325,7 +325,7 @@ function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id:
     return res_isi, res_ff, res_fr, sigmas, isimaxes, spans_ff, lms_ff, spans_fr, nbs_fr, lms_fr
 end
 # ============================================================================ #
-function get_usrey_ids(grp::Integer)
+function get_usrey_ids(grp::Integer, ngroups::Integer=3)
     grp > 4 && error("Invalid group: must be in [1,2,3]")
 
     tmp = Dict{String,String}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence")
@@ -336,11 +336,18 @@ function get_usrey_ids(grp::Integer)
     end
     ids = sort(unique(all_ids))
 
-    # ks = (grp-1)*15+1
-    # ke = ks + 14
-    ks = (grp-1)*11+1
-    ke = ks + 10
-    ke = grp == 4 ? length(ids) : ke
+    if ngroups == 3
+        ks = (grp-1)*15+1
+        ke = ks + 14
+        ke = grp == 3 ? length(ids) : ke
+    elseif ngroups == 4
+        ks = (grp-1)*11+1
+        ke = ks + 10
+        ke = grp == 4 ? length(ids) : ke
+    else
+        error("Invalid number of groups $(ngroups)")
+    end
+
     return ids[ks:ke]
 end
 # ============================================================================ #
