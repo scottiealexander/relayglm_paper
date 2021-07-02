@@ -232,12 +232,9 @@ function test_glm_model(::Type{A}, test::GLMFit.GLM, coef::Vector{Float64}) wher
     return pred
 end
 # ============================================================================ #
-function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id::Integer, type::String, nfold::Integer=10, shlf::Bool=true)
+function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id::Integer, type::String, nfold::Integer=10, shlf::Bool=true, io::IO=devnull)
 
     isi, relay_status = RelayISI.spike_status(ret, lgn)
-
-    ofile = joinpath(@__DIR__, "hyper-params", "$(id)_$(type)-hp-cv.log")
-    io = devnull #open(ofile, "a")
 
     res_isi = RRI(nfold)
     res_ff = RRI(nfold)
@@ -325,8 +322,6 @@ function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id:
         k += 1
     end
 
-    close(io)
-
     return res_isi, res_ff, res_fr, sigmas, isimaxes, spans_ff, lms_ff, spans_fr, nbs_fr, lms_fr
 end
 # ============================================================================ #
@@ -351,7 +346,7 @@ end
 # ============================================================================ #
 get_weyand_ids(::Integer) = get_ids(get_database(:weyand))
 # ============================================================================ #
-function collate_data(iids::AbstractVector{<:Integer}=Int[])
+function collate_data(iids::AbstractVector{<:Integer}=Int[], logdir::AbstractString="")
 
     d = Dict{String, Any}()
     tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
@@ -388,7 +383,12 @@ function collate_data(iids::AbstractVector{<:Integer}=Int[])
             id = ids[k]
 
             ret, lgn, _, _ = get_data(db, id=id)
-            res_isi, res_ff, res_fr, sigma, isimaxes, span_ff, lm_ff, span_fr, nb_fr, lm_fr = nested_cv(ret, lgn, id, type, nfold, true)
+
+            io = isdir(logdir) ? open(joinpath(logdir, "$(id)_$(type)-hp-cv.log"), "w") : devnull
+
+            res_isi, res_ff, res_fr, sigma, isimaxes, span_ff, lm_ff, span_fr, nb_fr, lm_fr = nested_cv(ret, lgn, id, type, nfold, true, io)
+
+            close(io)
 
             d[type][id]["isi"]["sigma"] = Vector{Float64}(sigma)
             d[type][id]["isi"]["isimax"] = Vector{Float64}(isimaxes)
