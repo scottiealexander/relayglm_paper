@@ -38,8 +38,8 @@ function train_isi_model(isi::AbstractVector{<:Real}, status::AbstractVector{<:R
         end
     end
 
-    # build the model using the best hyperparams (not, we are still *ONLY* using
-    # the training data specified by <idx>)
+    # build the model using the best hyperparams (note, we are still *ONLY*
+    # using the training data specified by <idx>)
     edges, eff = RelayISI.get_eff(isi, status, idx, best_sigma, 0.001, best_isimax)
     eff = RelayISI.scale_ef(edges, eff, isi[idx], status[idx], 0.001)
 
