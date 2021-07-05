@@ -1,7 +1,7 @@
 module Figure3
 
 using PaperUtils, DatabaseWrapper, RelayGLM, Progress
-using Plot, UCDColors
+using Plot, UCDColors, SimpleStats
 
 using Statistics, PyPlot, ColorTypes
 
@@ -81,7 +81,7 @@ function make_figure(d::Dict{String,Any}, ex_id::Integer=208, awake_id::Integer=
     t_xf = range(-0.2, -0.001, length=200)
     t_hf = range(-0.2, -0.001, length=200)
 
-    for type in ["msequence", "grating", "awake"]
+    for type in ["awake", "msequence", "grating"]
 
         if type == "awake"
             k = findfirst(isequal(awake_id), d[type]["ids"])
@@ -94,25 +94,37 @@ function make_figure(d::Dict{String,Any}, ex_id::Integer=208, awake_id::Integer=
         # example pair CH-retina plot
         y = PaperUtils.normalize(d[type]["xf"][:,k])
         se = d[type]["xse"][:,k]
-        ax[1].plot(t_xf, y, linewidth=3, color=colors[type], label=names[type] * " ($(id))")
+        ax[1].plot(t_xf, y, linewidth=3, color=colors[type], label=names[type] * " [$(id)]")
         ax[1].plot([t_xf[1], -.001], [0,0], ":", color="gray", linewidth=2)
 
         # example pair CH-LGN plot
         y = PaperUtils.normalize(d[type]["hf"][:,k])
         se = d[type]["hse"][:,k]
-        ax[2].plot(t_hf, y, linewidth=3, color=colors[type], label=names[type] * " ($(id))")
+        ax[2].plot(t_hf, y, linewidth=3, color=colors[type], label=names[type] * " [$(id)]")
         ax[2].plot([t_hf[1], -.001], [0,0], ":", color="gray", linewidth=2)
 
         N = size(d[type]["xf"], 2)
 
         # population CH-retina plot
-        y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["xf"]))
+        if type == "awake"
+            y = vec(mean(PaperUtils.normalize(d[type]["xf"]), dims=2))
+            sd = vec(std(PaperUtils.normalize(d[type]["xf"]), dims=2))
+            lo, hi = y .- sd, y .+ sd
+        else
+            y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["xf"]))
+        end
         plot_with_error(t_xf, y, lo, hi, RGB(colors[type]...), ax[3], linewidth=3, label=names[type] * "(n=$(N))")
 
         ax[3].plot([t_xf[1], -.001], [0,0], ":", color="gray", linewidth=2)
 
         # population CH-LGN plot
-        y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["hf"]))
+        if type == "awake"
+            y = vec(mean(PaperUtils.normalize(d[type]["hf"]), dims=2))
+            sd = vec(ste(PaperUtils.normalize(d[type]["hf"]), dims=2))
+            lo, hi = y .- sd, y .+ sd
+        else
+            y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["hf"]))
+        end
         plot_with_error(t_hf, y, lo, hi, RGB(colors[type]...), ax[4], linewidth=3, label=names[type] * " (n=$(N))")
 
         ax[4].plot([t_hf[1], -.001], [0,0], ":", color="gray", linewidth=2)
@@ -124,38 +136,33 @@ function make_figure(d::Dict{String,Any}, ex_id::Integer=208, awake_id::Integer=
 
     ax[1].set_ylim(-0.22, 0.55)
     # ax[2].set_ylim(-0.22, 0.55)
-    ax[2].set_yticklabels([])
+    # ax[2].set_yticklabels([])
+    ax[2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.2))
     ax[2].set_title("CH-LGN: examples", fontsize=16)
 
     yt = ax[3].get_yticks()
 
     ax[3].set_ylim(-0.15, 0.4)
     # ax[4].set_ylim(-0.15, 0.4)
-    ax[4].set_yticklabels([])
+    # ax[4].set_yticklabels([])
     ax[4].set_title("CH-LGN: Population", fontsize=16)
 
+    labels = ["A","B","C","D"]
     for k in 1:4
         if mod(k, 2) == 0
             ax[k].legend(frameon=false, fontsize=14)
-        end
-        if k == 1 || k == 3
+            Plot.axes_label(h, ax[k], labels[k], -0.23)
+        else
             ax[k].set_ylabel("Filter weight (A.U.)", fontsize=14)
+            Plot.axes_label(h, ax[k], labels[k])
         end
         if 2 < k < 5
             ax[k].set_xlabel("Time before spike (seconds)", fontsize=14)
         end
+        ax[k].set_xlim(t_xf[1]-0.004, t_xf[end]+0.004)
     end
 
-    Plot.axes_label(h, ax[1], "A")
-    Plot.axes_label(h, ax[2], "B", -0.23)
-    Plot.axes_label(h, ax[3], "C")
-    Plot.axes_label(h, ax[4], "D", -0.23)
-
-    ax[1].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.04))
-    ax[3].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.04))
-
-    ax[2].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.04))
-    ax[4].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.04))
+    foreach(x->x.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.04)), ax)
 
     return h
 end
