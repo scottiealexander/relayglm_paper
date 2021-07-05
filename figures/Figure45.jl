@@ -74,7 +74,7 @@ end
 function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
 
     names = [("isi", "ISI model"), ("ff", "Retinal\nmodel"), ("fr", "Combined\nmodel")]
-    colors = [GOLD, GREEN, PURPLE]
+    colors = [[0.,0.,0.], GREEN, PURPLE]
     idx = [(1,2), (1,3), (2,3)]
 
     # ------------------------------------------------------------------------ #
@@ -86,7 +86,7 @@ function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
     rh = [1.0, 0.3]
     rs = [0.08, 0.08, 0.05]
     cw = [1.0, 1.0, 1.0]
-    cs = [0.13, 0.08, 0.08, 0.04]
+    cs = [0.14, 0.08, 0.08, 0.04]
 
     tmp = Plot.axes_layout(h2, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
     ax2 = reshape(tmp[[1,4,2,5,3,6]], 2, 3)
@@ -112,32 +112,13 @@ function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
         println(io)
     end
 
-    stp = 0.05
+    stp = 0.01
     label = false
     for cax in ax2[1,:]
-        if metric == "roca"
-            cax.set_ylim(0.48, 1.0)
-            cax.set_ylabel(L"ROC_{area}", fontsize=14)
-            stp = 0.03
-        elseif metric == "pra"
-            cax.set_ylim(0.0, 1.0)
-            cax.set_ylabel("Precision-recall", fontsize=14)
-        elseif metric == "jsd"
-            cax.set_ylim(-0.02, 0.75)
-            cax.set_ylabel("JS divergence", fontsize=14)
-        elseif metric == "rbili"
-            stp = 0.03
-            cax.set_ylim(-0.02, 0.55)
-            cax.set_ylabel("Relative Likelihood", fontsize=14)
-        elseif metric == "rri"
-            stp = 0.02
-            cax.set_ylim(-0.01, 0.5)
-            if !label
-                cax.set_ylabel(L"\mathcal{I}_{Bernoulli}\ \mathrm{(bits/event)}", fontsize=14)
-                label = true
-            end
-        else
-            error("Invalid metric: $(metric)")
+        cax.set_ylim(-0.01, 0.5)
+        if !label
+            cax.set_ylabel(L"\mathcal{I}_{Bernoulli}\ \mathrm{(bits/event)}", fontsize=14)
+            label = true
         end
     end
 
@@ -183,27 +164,10 @@ function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
 
     label = false
     for cax in ax3[1,:]
-        if metric == "roca"
-            cax.set_ylim(0.48, 1.0)
-            cax.set_ylabel(L"ROC_{area}", fontsize=14)
-        elseif metric == "pra"
-            cax.set_ylim(0.0, 1.0)
-            cax.set_ylabel("Precision-recall", fontsize=14)
-        elseif metric == "jsd"
-            cax.set_ylim(-0.02, 0.75)
-            cax.set_ylabel("JS divergence", fontsize=14)
-        elseif metric == "rbili"
-            cax.set_ylim(-0.02, 0.5)
-            cax.set_ylabel("Relative Likelihood", fontsize=14)
-        elseif metric == "rri"
-            stp = 0.05
-            cax.set_ylim(-0.01, 0.5)
-            if !label
-                cax.set_ylabel(L"\mathcal{I}_{Bernoulli}\ \mathrm{(bits/event)}", fontsize=14)
-                label = true
-            end
-        else
-            error("Invalid metric: $(metric)")
+        cax.set_ylim(-0.01, 0.5)
+        if !label
+            cax.set_ylabel(L"\mathcal{I}_{Bernoulli}\ \mathrm{(bits/event)}", fontsize=14)
+            label = true
         end
     end
 
@@ -216,6 +180,57 @@ function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
     ax3[2,1].set_ylabel("Paired median\ndifference", fontsize=14)
 
     foreach(x -> Plot.axes_label(h2, x[1], x[2]), zip(ax3[1,:], ["A","B","C"]))
+
+    # ------------------------------------------------------------------------ #
+    # Figure 6
+
+    h4 = figure()
+    h4.set_size_inches((7,7))
+
+    cs[1] += 0.01
+
+    tmp = Plot.axes_layout(h4, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
+    ax4 = reshape(tmp[[1,4,2,5,3,6]], 2, 3)
+    foreach(default_axes, ax4)
+
+    println(io, "*"^80)
+    println(io, "AWAKE:")
+    for k in eachindex(idx)
+        k1, k2 = idx[k]
+        d1 = data(d["awake"], metric, names[k1][1])
+        d2 = data(d["awake"], metric, names[k2][1])
+        v, lo, hi = GAPlot.cumming_plot(d1, d2, ax=ax4[:,k], colors=colors[[k1,k2]], dcolor=GOLD)
+        _, p = SimpleStats.paired_permutation_test(median, d1, d2)
+
+        er = mad(d1 .- d2)
+
+        ax4[1,k].set_xticklabels([names[k1][2], names[k2][2]], fontsize=12)
+
+        println(io, "\t$(replace(names[k1][2], "\n"=>" ")) vs. $(replace(names[k2][2], "\n"=>" "))")
+        @printf(io, "\t\tmedian %s difference: %.3f bits/event (MAD %.3f 95%% CI [%.3f, %.3f] p = %.4f)\n", uppercase(metric), v, er, lo, hi, p)
+        println(io)
+    end
+
+    stp = 0.05
+
+    label = false
+    for cax in ax4[1,:]
+        cax.set_ylim(-0.01, 0.5)
+        if !label
+            cax.set_ylabel(L"\mathcal{I}_{Bernoulli}\ \mathrm{(bits/event)}", fontsize=14)
+            label = true
+        end
+    end
+
+    lo, up = axes_lim(ax4[2,:], 0.05)
+    for (k,cax) in enumerate(ax4[2,:])
+        cax.set_ylim(lo, up)
+        cax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(stp))
+    end
+
+    ax4[2,1].set_ylabel("Paired median\ndifference", fontsize=14)
+
+    foreach(x -> Plot.axes_label(h2, x[1], x[2]), zip(ax4[1,:], ["A","B","C"]))
 
     # ------------------------------------------------------------------------ #
 
