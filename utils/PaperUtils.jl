@@ -7,7 +7,7 @@ import RelayGLM.RelayUtils
 import LinearAlgebra
 
 export get_ef, get_asterix, normalize, rate_split, median_split, quantile_groups
-export axes_position, axes_layout
+export axes_position, axes_layout, mean_norm
 export correlation, count_relayed, contribution, roundn, filter_ci
 
 const EXCLUDE = Dict{String,Vector{Int}}("grating"=>[115], "msequence"=>[210], "awake"=>Int[])
@@ -18,9 +18,9 @@ function roundn(x::Real, n::Integer)
     return round(x * f) / f
 end
 # ---------------------------------------------------------------------------- #
-contribution(ret::Vector{Float64}, lgn::Vector{Float64}) = findall(>(0.0), RelayUtils.relay_status(lgn, ret))
+contribution(ret::Vector{Float64}, lgn::Vector{Float64}) = findall(>(0), RelayUtils.relay_status(lgn, ret))
 # ---------------------------------------------------------------------------- #
-count_relayed(ret::Vector{Float64}, lgn::Vector{Float64}) = sum(RelayUtils.relay_status(lgn, ret))
+count_relayed(ret::Vector{Float64}, lgn::Vector{Float64}) = sum(RelayUtils.relay_status(ret, lgn))
 # ---------------------------------------------------------------------------- #
 function correlation(x, y; method::Symbol=:cor)
     if method == :cor
@@ -49,6 +49,16 @@ function normalize(x::Matrix{<:Real})
     y = copy(x)
     for col in eachcol(y)
         col ./= LinearAlgebra.norm(col, 2)
+    end
+    return y
+end
+# ============================================================================ #
+function mean_norm(x::Matrix{<:Real}; dims::Integer=2)
+    mn = mean(x, dims=dims)
+    id = [2,1][dims]
+    y = copy(x)
+    for (k, sl) in enumerate(eachslice(y, dims=id))
+        sl ./= mn[k]
     end
     return y
 end

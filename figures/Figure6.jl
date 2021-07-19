@@ -18,31 +18,36 @@ const FFSPAN = 200
 `twin` - the duration of the time window preceding each target spike over
 which LGN spikes are counted for partitioning
 """
-function collate_data(::Type{T}, twin::Real=0.1) where T <: RelayGLM.PerformanceMetric
+function collate_data(;twin::Real=0.1)
 
-    NQUARTILE = 3
     bin_size = 0.001
+    npct = 4
 
     d = Dict{String, Any}()
-    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
+    tmp = ["grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand]
 
-    key = RelayGLM.key_name(T)
+    key = RelayGLM.key_name(RRI)
 
     for (type, ptrn) in tmp
         exc = copy(PaperUtils.EXCLUDE[type])
         if type == "msequence"
             push!(exc, 102)
         end
+
         db = get_database(ptrn, id -> !in(id, exc))
         d[type] = Dict{String, Any}()
         d[type]["ids"] = get_ids(db)
 
-        for q in 1:NQUARTILE
+        if type == "awake"
+            npct = 2
+        end
+
+        for q in 1:npct
             name = "q" * string(q)
             d[type]["xf_" * name] = Matrix{Float64}(undef, FFSPAN, length(db))
             d[type]["efficacy_" * name] = Vector{Float64}(undef, length(db))
             d[type]["contribution_" * name] = Vector{Float64}(undef, length(db))
-            d[type][key * "_" * name] = init_output(T, length(db))
+            d[type][key * "_" * name] = init_output(RRI, length(db))
             d[type]["nlli_" * name] = Vector{Float64}(undef, length(db))
 
             if q == 1
@@ -57,13 +62,13 @@ function collate_data(::Type{T}, twin::Real=0.1) where T <: RelayGLM.Performance
             t1 = time()
             ret, lgn, _, _ = get_data(db, k)
 
-            kq = rate_split(ret, lgn, round(Int, twin / bin_size))
+            kq = rate_split(ret, lgn, round(Int, twin / bin_size), npct)
 
-            for q in 1:NQUARTILE
+            for q in 1:npct
                 name = "q" * string(q)
                 kspk = kq[q]
                 ef, cn, nret, nlgn = stats(ret, lgn, kspk, FFSPAN)
-                res = run_one(T, kspk, ret, lgn, bin_size)
+                res = run_one(RRI, kspk, ret, lgn, bin_size)
                 d[type]["xf_" * name][:,k] = get_coef(res, :ff)
                 d[type]["efficacy_" * name][k] = ef
                 d[type]["contribution_" * name][k] = cn
@@ -86,23 +91,23 @@ end
 # ============================================================================ #
 function make_figure(d; show_inset::Bool=true, color_scheme::String="grwhpu", io::IO=stdout)
 
-    N = length(filter(x->match(r"xf_q\d", x) != nothing, keys(d["grating"])))
-
     h = figure()
-    h.set_size_inches((9,10.0))
+    h.set_size_inches((9,9.5))
 
-    rh = [1.0, 0.33, 1.0, 0.33, 1.0, 0.33]
-    rs = [0.09, 0.025, 0.15, 0.025, 0.15, 0.025, 0.06]
+    rh = [1.0, 0.33, 1.0, 0.33]#, 1.0, 0.33]
+    rs = [0.09, 0.025, 0.15, 0.025, 0.06]#0.15, 0.025, 0.06]
     cw = [1.0, 1.0]
-    cs = [0.1, 0.12, 0.03]
+    cs = [0.1, 0.10, 0.03]
 
     ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
-    foreach(x->x.remove(), ax[[3,7,11]])
-    bottom_align(ax[1], ax[4])
-    bottom_align(ax[5], ax[8])
-    bottom_align(ax[9], ax[12])
 
-    deleteat!(ax, [3, 7, 11])
+    # foreach(x->x.remove(), ax[[3,7,11]])
+    # foreach(bottom_align, ax[[1,5,9]], ax[[4,8,12]])
+    # deleteat!(ax, [3, 7, 11])
+
+    foreach(x->x.remove(), ax[[3,7]])
+    foreach(bottom_align, ax[[1,5]], ax[[4,8]])
+    deleteat!(ax, [3, 7])
 
     foreach(default_axes, ax)
 
@@ -114,36 +119,43 @@ function make_figure(d; show_inset::Bool=true, color_scheme::String="grwhpu", io
     elseif color_scheme == "grwhpu"
         col = [GREEN, LIGHTGREEN, LIGHTPURPLE, PURPLE]
     elseif color_scheme == "full"
-        # col = [GREEN, ORANGE, GOLD, PURPLE]
-        col = [GREEN, [.3, .3, .3], PURPLE]
+        col = [GREEN, ORANGE, GOLD, PURPLE]
+        # col = [GREEN, [.3, .3, .3], PURPLE]
     else
         error(color_scheme * " is not a valid color scheme")
     end
 
-    xmn, xmx = N == 4 ? (-1.5, 8.0) : (-1.0, 5.5)
-    foreach(x->x.set_xlim(xmn, xmx), ax[[2,3,5,6,8,9]])
+    xmn, xmx = (-1.5, 8.0)
+    foreach(x->x.set_xlim(xmn, xmx), ax[[2,3,5,6]])
+    # foreach(x->x.set_xlim(xmn, xmx), ax[[2,3,5,6,8,9]])
 
     titles = ["Binary white noise", "Gratings", "Awake"]
     title_color = [BLUE, RED, GOLD]
-    if N == 4
-        xv = [0.0, 2.25, 4.0, 6.25]
-    else
-        xv = [0.0, 2.0, 4.0]
-    end
+
+    xv = [0.0, 2.25, 4.0, 6.35]
+
     inset_length = show_inset ? 30 : 0
 
-    for (k,typ) in enumerate(["msequence", "grating", "awake"])
+    for (k,typ) in enumerate(["msequence", "grating"])#, "awake"])
+
+        N = length(filter(x->match(r"xf_q\d", x) != nothing, keys(d[typ])))
+
+        if N == 2
+            colors = col[[1,end]]
+        else
+            colors = col
+        end
 
         kax = (k-1)*3+1
-        plot_one(d, typ, ax[kax:kax+2], col, xmn, xmx, xv, inset_length=inset_length, yloc=0.1)
+        plot_one(d, typ, ax[kax:kax+2], colors, xv, inset_length=inset_length, yloc=0.5, ci=typ!="awake")
 
         if k == 1
             ax[kax].legend(frameon=false, fontsize=14, loc="upper left")
         end
 
-        format_filter_plot(ax[kax], 0.1)
+        format_filter_plot(ax[kax], 0.5)
 
-        ax[kax+1].set_xticks(xv)
+        ax[kax+1].set_xticks(xv[1:N])
         ax[kax+1].set_xticklabels([])
         ax[kax+1].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.1))
         ax[kax+1].set_ylabel(L"\mathcal{I}_{Bernoulli}", fontsize=14)
@@ -151,26 +163,30 @@ function make_figure(d; show_inset::Bool=true, color_scheme::String="grwhpu", io
         ymx = max(0.2, ax[kax+2].get_ylim()[2])
         yts = ymx <= 0.5 ? 0.1 : 0.3
         ax[kax+2].set_ylim(-0.02, ymx)
-        ax[kax+2].set_xticks(xv)
-        ax[kax+2].set_xticklabels(map(x->"Q"*string(x), 1:N), fontsize=14)
+        ax[kax+2].set_xticks(xv[1:N])
+
+        if typ == "awake"
+            ax[kax+2].set_xticklabels(["low", "high"], fontsize=14)
+        else
+            ax[kax+2].set_xticklabels(map(x->"Q"*string(x), 1:N), fontsize=14)
+        end
+
         ax[kax+2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(yts))
         ax[kax+2].set_ylabel("Median\n\$\\mathcal{I}_{Bernoulli}\$", fontsize=14)
     end
 
-    labels = ["A","B","C","D","E","F"]
+    labels = ["A","B","C","D"]
+    foreach((k,l)->Plot.axes_label(h, ax[k], l), [1,2,4,5], labels)
 
-    for (k, label) in zip([1,2,4,5,7,8], labels)
-        Plot.axes_label(h, ax[k], label)
-    end
-
-    h.text(0.5, 0.997, "Binary white noise", fontsize=24, color=BLUE, horizontalalignment="center", verticalalignment="top")
-    h.text(0.5, 0.667, "Gratings", fontsize=24, color=RED, horizontalalignment="center", verticalalignment="top")
-    h.text(0.5, 0.334, "Awake", fontsize=24, color=GOLD, horizontalalignment="center", verticalalignment="top")
+    h.text(0.5, 0.995, "Binary white noise", fontsize=24, color=BLUE, horizontalalignment="center", verticalalignment="top")
+    h.text(0.5, 0.5, "Gratings", fontsize=24, color=RED, horizontalalignment="center", verticalalignment="top")
+    # h.text(0.5, 0.334, "Awake", fontsize=24, color=GOLD, horizontalalignment="center", verticalalignment="top")
 
     return h
 end
 # ============================================================================ #
-function plot_one(d, typ, ax, colors, xmn, xmx, xv; inset_length::Integer=30, yloc::Real=0.5)
+function plot_one(d, typ, ax, colors, xv; inset_length::Integer=30, yloc::Real=0.5,
+    ci::Bool=true, labels::AbstractVector{<:AbstractString}=String[])
 
     len = size(d[typ]["xf_q1"], 1)
     t = range(-len*0.001, -0.001, length=len)
@@ -188,11 +204,15 @@ function plot_one(d, typ, ax, colors, xmn, xmx, xv; inset_length::Integer=30, yl
 
     ax[1].plot([t[1], t[end]], [0,0], "--", color="black", linewidth=2)
 
+    if length(labels) < N
+        append!(labels, fill("", N - length(labels)))
+    end
+
     mn = +Inf
     mx = -Inf
     for q in 1:N
         name = "q" * string(q)
-        mnt, mxt = filter_plot(d, t, typ, name, ax[1], sax, colors[q], inset_length)
+        mnt, mxt = filter_plot(d, t, typ, name, ax[1], sax, colors[q], inset_length, label=labels[q]; ci=ci)
 
         mn = min(mn, mnt)
         mx = max(mx, mxt)
@@ -201,13 +221,14 @@ function plot_one(d, typ, ax, colors, xmn, xmx, xv; inset_length::Integer=30, yl
 
         bs = bmedian(d[typ]["rri_"*name])
         GAPlot.distribution(bs, ax[3], x=xv[q], draw_axis=false, color=colors[q], peak=1.2, sep=0.17)
-        ax[3].plot([xmn, xmx], [0,0], "--", linewidth=1, color="gray", alpha=0.75)
+        ax[3].plot(ax[3].get_xlim(), [0,0], "--", linewidth=1, color="gray", alpha=0.75)
     end
 
     if inset_length > 0
         inset_box(t, mn, mx, ax[1], inset_length)
     end
 
+    return sax
 end
 # ============================================================================ #
 function inset_box(t::AbstractVector{<:Real}, mn::Real, mx::Real, ax, inset_length)
@@ -220,17 +241,36 @@ function inset_box(t::AbstractVector{<:Real}, mn::Real, mx::Real, ax, inset_leng
     ax.plot(xl, yl, "--", color="black", linewidth=1)
 end
 # ============================================================================ #
-function filter_plot(d::Dict{String,Any}, t::AbstractVector{<:Real}, typ, name, ax, sax, col, inset_length)
-    val, lo, hi = filter_ci(PaperUtils.normalize(d[typ]["xf_"*name]))
-    plot_with_error(t, val, lo, hi, RGB(col...), ax, linewidth=3, label=uppercase(name), ferr=5.0)
+function filter_plot(d::Dict{String,Any}, t::AbstractVector{<:Real}, typ, name::String, ax, sax, col, inset_length;
+    label::String="", ci::Bool=true)
 
+    label = isempty(label) ? uppercase(name) : label
     mn = 0
     mx = 0
-    if inset_length > 0
-        ki = length(t)-inset_length:length(t)
-        plot_with_error(t[ki], val[ki], lo[ki], hi[ki], RGB(col...), sax, linewidth=3, ferr=5.0)
-        mn = minimum(lo[ki])
-        mx = maximum(hi[ki])
+
+    if ci
+        val, lo, hi = filter_ci(d[typ]["xf_"*name])
+        plot_with_error(t, val, lo, hi, RGB(col...), ax, linewidth=3, label=label, ferr=4.0)
+
+        if inset_length > 0
+            ki = length(t)-inset_length:length(t)
+            plot_with_error(t[ki], val[ki], lo[ki], hi[ki], RGB(col...), sax, linewidth=3, ferr=4.0)
+            mn = minimum(lo[ki])
+            mx = maximum(hi[ki])
+        end
+    else
+        light_col, _ = Plot.shading_color(col, 4.0)
+        tmp = PaperUtils.normalize(d[typ]["xf_"*name])
+        ax.plot(t, tmp, linewidth=1.5, color=light_col)
+        ax.plot(t, mean(tmp, dims=2), linewidth=3.5, color=col, label=label, zorder=100)
+
+        if inset_length > 0
+            ki = length(t)-inset_length:length(t)
+            tmp = PaperUtils.normalize(d[typ]["xf_"*name])[ki,:]
+            sax.plot(t[ki], tmp, linewidth=1.5, color=light_col)
+            sax.plot(t[ki], mean(tmp, dims=2), linewidth=3.5, color=col, label=label, zorder=100)
+            mn, mx = extrema(tmp) .* 1.05
+        end
     end
 
     return mn, mx
@@ -240,7 +280,7 @@ function format_filter_plot(ax, yloc::Real=0.5)
     ax.set_xlabel("Time before spike (seconds)", fontsize=14)
     ax.set_ylabel("Filter weight (A.U.)", fontsize=14)
     ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.05))
-    # ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.5))
+    ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(yloc))
 end
 # ============================================================================ #
 function run_one(::Type{T}, kuse::AbstractVector{<:Integer}, ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, bin_size::Real) where T <: RelayGLM.PerformanceMetric
@@ -259,11 +299,12 @@ function filter_stats(f1::AbstractVector{<:Real}, f2::AbstractVector{<:Real}, bi
     return cor(f1, f2), RelayUtils.trapz(abs.(f1 .- f2)) .* bin_size
 end
 # ============================================================================ #
-function rate_split(ret::Vector{Float64}, lgn::Vector{Float64}, kwin::Integer)
+function rate_split(ret::Vector{Float64}, lgn::Vector{Float64}, kwin::Integer, ngrp::Integer=4)
     p, _ = psth(lgn, ret, -(kwin + 1):-1, 0.001)
     fr = vec(sum(p, dims=1))
-    # return quantile_groups(fr, [0.25, 0.5, 0.75])
-    return quantile_groups(fr, [0.334, 0.667])
+
+    pct = range(0, 1, length=ngrp+1)
+    return quantile_groups(fr, collect(pct[2:end-1]))
 end
 # ============================================================================ #
 function stats(ret::Vector{Float64}, lgn::Vector{Float64}, kidx::Vector{Int}, win::Integer=FFSPAN)

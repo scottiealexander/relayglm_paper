@@ -19,7 +19,7 @@ function plot_with_error(x::RealVec, y::RealVec, yerr::RealVec,
 end
 # ---------------------------------------------------------------------------- #
 function plot_with_error(x::RealVec, y::RealVec, ylo::RealVec, yhi::RealVec,
-    col::ColorTypes.RGB, ax=nothing; linewidth=4.0, alpha=0.5, label="", ferr=8.0, args...)
+    col::ColorTypes.RGB, ax=nothing; linewidth=4.0, alpha=0.5, label="", ferr=6.0, args...)
     if ax == nothing
         ax = default_axes()
     end

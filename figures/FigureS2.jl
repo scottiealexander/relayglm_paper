@@ -5,23 +5,24 @@ using GAPlot, DatabaseWrapper, RelayGLM
 import PaperUtils, Figure45
 # ============================================================================ #
 @enum SpikeType AllSpikes TriggeredSpikes
+const Strmbol = Union{String,Symbol}
 # ============================================================================ #
-collate_data() = Figure45.collate_data(RRI);
+collate_data() = Figure45.collate_data();
 # ============================================================================ #
 """
-`make_figure(d::Dict{String,Any})`
+`make_figure(d::Dict{String,Any}; force::Bool=false, io::IO=stdout, inc::Symbol=:all, denom::SpikeType=AllSpikes)`
 
 Where `d` is a results dictionary returned by `Figure45.collate_data()`
 
 See also: `FigureS2.collate_data()`
 """
-function make_figure(d::Dict{String,Any}; io::IO=stdout, inc::Symbol=:all, denom::SpikeType=AllSpikes)
+function make_figure(d::Dict{String,Any}; force::Bool=false, io::IO=stdout, inc::Symbol=:all, denom::SpikeType=AllSpikes)
 
     h = figure()
     h.set_size_inches((5.5,9.6))
 
     row_height = [1.0, 1.0, 1.0]
-    row_spacing = [0.08, 0.08, 0.08, 0.05]
+    row_spacing = [0.08, 0.08, 0.08, 0.06]
     col_width = [1.0, 0.33]
     col_spacing = [0.15, 0.06, 0.1]
 
@@ -29,6 +30,19 @@ function make_figure(d::Dict{String,Any}; io::IO=stdout, inc::Symbol=:all, denom
         col_width=col_width, col_spacing=col_spacing)
 
     foreach(default_axes, ax)
+
+    for typ in keys(d)
+        if !haskey(d[typ], "contribution") || !haskey(d[typ], "efficacy") || force
+            ids = d[typ]["ids"]
+            d[typ]["efficacy"] = zeros(length(ids))
+            d[typ]["contribution"] = zeros(length(ids))
+            for k in eachindex(ids)
+                ef, cn = get_eff_cont(typ, ids[k])
+                d[typ]["efficacy"][k] = ef
+                d[typ]["contribution"][k] = cn
+            end
+        end
+    end
 
     figure_ab(d, ax[1:4], inc=inc, io=io)
     figure_c(d, ax[5:end], denom=denom, io=io)
@@ -70,6 +84,8 @@ function figure_ab(d, ax; io::IO=stdout, inc::Symbol=:all)
     rm, pm, mlo, mhi = single_figure(dm, metric, "contribution", "ff", ax[1], ax[2], BLUE, "Binary white noise (n=$(length(dm["ids"])))",
         xoffset=0.4, show_legend=true, f3="", z="efficacy")
 
+    # ra, pa, alo, ahi = single_figure(d["awake"], metric, "contribution", "ff", ax[1], ax[2], GOLD, "Awake (n=8)", xoffset=0.8, f3="", z="efficacy")
+
     ax[1].get_legend().set_bbox_to_anchor([0.02, 1.3])
 
     xl = "Residual contribution"
@@ -88,9 +104,12 @@ function figure_ab(d, ax; io::IO=stdout, inc::Symbol=:all)
 
     z = ""#"efficacy"
 
-    rg, pg, glo, ghi = single_figure(dg, metric, "contribution", "fb", ax[3], ax[4], RED, "Gratings", f3="ff", z=z)
-    rm, pm, mlo, mhi = single_figure(dm, metric, "contribution", "fb", ax[3], ax[4], BLUE, "Binary white noise",
+    rg, pg, glo, ghi = single_figure(dg, metric, "contribution", "fr", ax[3], ax[4], RED, "Gratings", f3="ff", z=z)
+    rm, pm, mlo, mhi = single_figure(dm, metric, "contribution", "fr", ax[3], ax[4], BLUE, "Binary white noise",
         xoffset=0.4, show_legend=false, f3="ff", z=z)
+
+    # ra, pa, alo, ahi = single_figure(d["awake"], metric, "contribution", "fr", ax[3], ax[4], GOLD, "Awake",
+    #     xoffset=0.8, show_legend=false, f3="ff", z=z)
 
     ax[3].set_ylim(-0.007, 0.09)
 
@@ -110,7 +129,7 @@ function figure_ab(d, ax; io::IO=stdout, inc::Symbol=:all)
     @printf(io, "\tGratings: R = %.3f, 95%% CI [%.3f, %.3f], p = %.3f\n\tMSequence: R = %.3f, 95%% CI [%.3f, %.3f], p = %.3f\n", rg, glo, ghi, pg, rm, mlo, mhi, pm)
 
 
-    for (cax, lab) in zip(ax[[1,3]], ["A","B"])
+     foreach(ax[[1,3]], ["A","B"]) do cax, lab
         Plot.axes_label(cax.figure, cax, lab)
     end
 
@@ -128,11 +147,11 @@ function figure_c(d::Dict, ax; denom::SpikeType=AllSpikes, io::IO=stdout)
     println("*"^80)
     println("Non-cardinal burst spikes (%) vs. CH - RH")
 
-    for k in keys(d)
+    for k in ["msequence", "grating"]
 
         burst = get_burst_percent(d, k, denom)
 
-        di = d[k][metric]["fb"] .- d[k][metric]["ff"]
+        di = d[k][metric]["fr"] .- d[k][metric]["ff"]
 
         N = length(d[k]["ids"])
 
@@ -149,8 +168,10 @@ function figure_c(d::Dict, ax; denom::SpikeType=AllSpikes, io::IO=stdout)
     ax[1].set_xlabel(xlab, fontsize=14)
     ax[1].set_ylabel(L"\Delta \mathcal{I}_{Bernoulli}\ \mathrm{(CH - RH)}", fontsize=14)
 
-    ax[2].set_xticks([0, 0.6])
-    ax[2].set_xticklabels(["Gratings", "Binary\nwhite noise"], fontsize=12)
+    # ax[2].set_xticks([0, 0.6])
+    # ax[2].set_xticklabels(["Gratings", "Binary\nwhite noise"], fontsize=12)
+    ax[2].set_xticks([0.05, 0.7])
+    ax[2].set_xticklabels(["Gratings", "Binary\nwhite noise"], fontsize=10)
     ax[2].plot(ax[2].get_xlim(), [0, 0], "--", color="black", linewidth=1.5)
 
     ax[1].set_ylim(-0.007, 0.09)
@@ -212,7 +233,9 @@ function single_figure(d, metric::String, f1::String, f2::String, ax1, ax2, colo
 end
 # ============================================================================ #
 function get_burst_percent(d::Dict, type::String, denom::SpikeType=AllSpikes)
-    tmp = Dict{String,String}("grating" => "(?:contrast|area|grating)", "msequence" => "msequence")
+
+    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)",
+        "msequence" => "msequence", "awake" => :weyand)
 
     db = get_database(tmp[type], id -> !in(id, PaperUtils.EXCLUDE[type]))
 
@@ -253,6 +276,13 @@ function get_burst_percent(d::Dict, type::String, denom::SpikeType=AllSpikes)
     end
 
     return burst_pct
+end
+# ============================================================================ #
+function get_eff_cont(typ, id)
+    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
+    db = get_database(tmp[typ], id -> !in(id, PaperUtils.EXCLUDE[typ]))
+    ret, lgn, _, _ = get_data(db; id=id)
+    return sum(wasrelayed(ret, lgn)) / length(ret), length(PaperUtils.contribution(ret, lgn)) / length(lgn)
 end
 # ============================================================================ #
 end

@@ -69,21 +69,17 @@ Figure3.make_figure(d3, 208)
 # recreate figures 4 & 5
 using Figure45, RelayGLM
 
-# we can specify different metrics to quantify model performance, here we use
-# RRI (relative relay information) which in the paper we call Bernoulli
-# information (as that is it's proper name)
-d45 = Figure45.collate_data(RRI)
+d45 = Figure45.collate_data()
 
-Figure45.make_figure(d45, RelayGLM.key_name(RRI))
+Figure45.make_figure(d45)
 
 # ============================================================================ #
 # recreate figure 6
 using Figure6, RelayGLM
 
-# as with Figures 4 & 5 we can specify different metrics, as well as different
-# time window durations to use for RGC spike partitioning, here we use 100 ms
-# (or 0.1 sec) which is what the Figure6 in the paper uses
-d6 = Figure6.collate_data(RRI, 0.1)
+# we can specify the time window durations to use for RGC spike partitioning
+# here we use 100 ms (or 0.1 sec) which is what the Figure6 in the paper uses
+d6 = Figure6.collate_data(twin=0.1)
 
 Figure6.make_figure(d)
 
@@ -105,7 +101,7 @@ Figure7.make_figure(d7)
 using FigureS1
 
 ds1 = FigureS1.collate_data()
-FigureS1.make_figure(d)
+FigureS1.make_figure(ds1)
 
 # ============================================================================ #
 # recreate figure S2
@@ -127,11 +123,19 @@ using FigureS3
 d = FigureS3.collate_data()
 FigureS3.make_figure(d)
 
+# ============================================================================ #
+# recreate figure S4
+using FigureS4
+
+d = FigureS4.collate_data()
+FigureS4.make_figure(d)
+
 ```
 
 ## Dependencies
 
 The non-registered dependencies on which this code relies are automatically installed by the script `install_dependencies.jl` (see instructions above). Their code can be found at:
+
 * [RelayGLM.jl](https://github.com/scottiealexander/RelayGLM.jl.git)
 * [PairsDB.jl](https://github.com/scottiealexander/PairsDB.jl.git)
 

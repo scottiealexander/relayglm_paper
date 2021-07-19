@@ -3,11 +3,17 @@ module Figure45
 using GAPlot, Plot, UCDColors, SimpleStats, DatabaseWrapper, RelayGLM, Progress
 using RelayGLM.RelayISI, PaperUtils, HyperParamsCV
 using LinearAlgebra, Statistics, PyPlot, ColorTypes, Bootstrap, Printf
+import JSON
 
 const Strmbol = Union{String,Symbol}
 
 # ============================================================================ #
-function collate_data(::Type{T}) where T <: RelayGLM.PerformanceMetric
+function collate_data()
+    return open(JSON.parse,
+        joinpath(@__DIR__, "..", "preprocessed_data", "figure45.json"), "r")
+end
+# ============================================================================ #
+function collate_data_quick(::Type{T}) where T <: RelayGLM.PerformanceMetric
 
     bin_size = 0.001
     mxisi = roundn.(10.0 .^ range(log10(0.03), log10(0.5), length=8), -3)

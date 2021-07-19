@@ -6,7 +6,7 @@ using PyPlot, PyCall, Plot
 const DSet = Dict{String,Any}
 # ============================================================================ #
 function collate_data()
-    return Figure6.collate_data(RRI, 0.250), Figure6.collate_data(RRI, 0.125)
+    return Figure6.collate_data(twin=0.250), Figure6.collate_data(twin=0.125)
 end
 # ============================================================================ #
 function make_figure(data::Tuple{DSet,DSet}, color_scheme::String="grwhpu")
@@ -75,7 +75,7 @@ function make_figure(data::Tuple{DSet,DSet}, color_scheme::String="grwhpu")
             end
 
             Figure6.format_filter_plot(ax[kax])
-
+            ax[kax].set_xlim(t[1]-0.004, ax[kax].get_xlim()[2])
             ax[kax].set_title(titles[typ], fontsize=18, color=colors[typ])
 
             kax += 1

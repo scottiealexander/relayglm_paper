@@ -6,7 +6,7 @@ using PyPlot, KernelDensity, StatsBase, Bootstrap, Printf, Statistics
 # ============================================================================ #
 collate_data() = Figure6.collate_data(RRI, 0.1)
 # ============================================================================ #
-function make_figure(d::Dict{String,Any})
+function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(3))
 
     row_height = [1.0]
     row_spacing = [0.12, 0.14]
@@ -29,7 +29,9 @@ function make_figure(d::Dict{String,Any})
     len = size(d["grating"]["xf_q1"], 1)
     kt = 1:len #len-30:len
 
-    offset = [2, 5]
+    append!(offsets, zeros(3 - length(offsets)))
+
+    ycmax = 0.0
 
     for (k, lab) in enumerate(["msequence", "grating"])
 
@@ -58,8 +60,13 @@ function make_figure(d::Dict{String,Any})
 
         m = median(ad)
         kmn = findfirst(>(m), e) - 1
+        km2 = findfirst(>=(m), ac.x)
 
-        ax[1].plot(m, c[kmn] + offset[k], "v", markersize=14, color=colors[lab])
+        yc = max(c[kmn], y[km2]) + get_yext(ax[1]) * 0.1
+
+        ax[1].plot(m, yc + offsets[k], "v", markersize=14, color=colors[lab])
+
+        ycmax = max(ycmax, yc)
 
         val, l, h = GAPlot.distribution(bmedian(ad), ax[2], x=0.0, y=0, xoffset=0, draw_axis=false, color=colors[lab], sep=0.02, alpha=0.8)
 
@@ -69,7 +76,10 @@ function make_figure(d::Dict{String,Any})
         absd[:,k] = ad[ks]
     end
 
-    ax[1].legend(frameon=false, fontsize=14, loc="upper right", bbox_to_anchor=(1.15, 1.0))
+    m = median(assess(d["awake"]["xf_q1"], d["awake"]["xf_q2"], ird))
+    ax[1].plot(m, ycmax + offsets[3], "v", markersize=14, color=GOLD)
+
+    ax[1].legend(frameon=false, fontsize=14, loc="upper right", bbox_to_anchor=(1.1, 1.05))
 
     ax[1].set_xlabel(L"\int{|\mathrm{Q1} - \mathrm{Q4}|}", fontsize=14)
     ax[1].set_ylabel("Density (A.U.)", fontsize=14)
@@ -135,6 +145,11 @@ function hist_points(e, c)
     end
 
     return x, y
+end
+# ============================================================================ #
+function get_yext(ax)
+    yl = ax.get_ylim()
+    return yl[2] - yl[1]
 end
 # ============================================================================ #
 end

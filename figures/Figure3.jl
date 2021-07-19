@@ -61,15 +61,15 @@ function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime
     return d
 end
 # ============================================================================ #
-function make_figure(d::Dict{String,Any}, ex_id::Integer=208, awake_id::Integer=200205270; io::IO=stdout)
+function make_figure(d::Dict{String,Any}, ex_id::Integer=208; io::IO=stdout)
 
     h = figure()
-    h.set_size_inches((10,7.5))
+    h.set_size_inches((9,9.5))
 
-    rh = [1.0, 1.0]
-    rs = [0.08, 0.13, 0.08]
+    rh = [1.0, 1.0, 1.0]
+    rs = [0.06, 0.11, 0.11, 0.06]
     cw = [1.0, 1.0]
-    cs = [0.10, 0.05, 0.03]
+    cs = [0.10, 0.07, 0.03]
 
     ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
 
@@ -81,82 +81,66 @@ function make_figure(d::Dict{String,Any}, ex_id::Integer=208, awake_id::Integer=
     t_xf = range(-0.2, -0.001, length=200)
     t_hf = range(-0.2, -0.001, length=200)
 
-    for type in ["awake", "msequence", "grating"]
+    foreach((x,t) -> x.plot([t, -.001], [0,0], ":", color="black", linewidth=2), ax, fill(t_xf[1], length(ax)))
 
-        if type == "awake"
-            k = findfirst(isequal(awake_id), d[type]["ids"])
-        else
-            k = findfirst(isequal(ex_id), d[type]["ids"])
-        end
+    for type in ["msequence", "grating"]
+
+        k = findfirst(isequal(ex_id), d[type]["ids"])
 
         id = string(d[type]["ids"][k])
 
         # example pair CH-retina plot
         y = PaperUtils.normalize(d[type]["xf"][:,k])
         se = d[type]["xse"][:,k]
-        ax[1].plot(t_xf, y, linewidth=3, color=colors[type], label=names[type] * " [$(id)]")
-        ax[1].plot([t_xf[1], -.001], [0,0], ":", color="gray", linewidth=2)
+        ax[1].plot(t_xf, y, linewidth=3, color=colors[type], label=names[type])
+
 
         # example pair CH-LGN plot
         y = PaperUtils.normalize(d[type]["hf"][:,k])
         se = d[type]["hse"][:,k]
-        ax[2].plot(t_hf, y, linewidth=3, color=colors[type], label=names[type] * " [$(id)]")
-        ax[2].plot([t_hf[1], -.001], [0,0], ":", color="gray", linewidth=2)
+        ax[2].plot(t_hf, y, linewidth=3, color=colors[type], label=names[type])
 
         N = size(d[type]["xf"], 2)
 
         # population CH-retina plot
-        if type == "awake"
-            y = vec(mean(PaperUtils.normalize(d[type]["xf"]), dims=2))
-            sd = vec(std(PaperUtils.normalize(d[type]["xf"]), dims=2))
-            lo, hi = y .- sd, y .+ sd
-        else
-            y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["xf"]))
-        end
-        plot_with_error(t_xf, y, lo, hi, RGB(colors[type]...), ax[3], linewidth=3, label=names[type] * "(n=$(N))")
-
-        ax[3].plot([t_xf[1], -.001], [0,0], ":", color="gray", linewidth=2)
+        y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["xf"]))
+        plot_with_error(t_xf, y, lo, hi, RGB(colors[type]...), ax[3], linewidth=3, label=names[type] * " (n=$(N))")
 
         # population CH-LGN plot
-        if type == "awake"
-            y = vec(mean(PaperUtils.normalize(d[type]["hf"]), dims=2))
-            sd = vec(ste(PaperUtils.normalize(d[type]["hf"]), dims=2))
-            lo, hi = y .- sd, y .+ sd
-        else
-            y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["hf"]))
-        end
+        y, lo, hi = filter_ci(PaperUtils.normalize(d[type]["hf"]))
         plot_with_error(t_hf, y, lo, hi, RGB(colors[type]...), ax[4], linewidth=3, label=names[type] * " (n=$(N))")
-
-        ax[4].plot([t_hf[1], -.001], [0,0], ":", color="gray", linewidth=2)
     end
 
-    ax[1].set_title("CH-retinal: examples", fontsize=16)
+    N = size(d["awake"]["xf"], 2)
+    ax[5].plot(t_xf, PaperUtils.normalize(d["awake"]["xf"]), color="gray", linewidth=1, alpha=1.0)
+    ax[5].plot(t_xf, mean(PaperUtils.normalize(d["awake"]["xf"]), dims=2), color=GOLD, linewidth=3, label="Population mean (n=$(N))")
 
+    ax[6].plot(t_xf, PaperUtils.normalize(d["awake"]["hf"]), color="gray", linewidth=1, alpha=1.0)
+    ax[6].plot(t_xf, mean(PaperUtils.normalize(d["awake"]["hf"]), dims=2), color=GOLD, linewidth=3, label="Population mean (n=$(N))")
+
+    ax[1].set_title("CH-retinal: Pair $(ex_id)", fontsize=16)
     ax[3].set_title("CH-retinal: Population", fontsize=16)
+    ax[5].set_title("CH-retinal: Awake", fontsize=16)
 
     ax[1].set_ylim(-0.22, 0.55)
-    # ax[2].set_ylim(-0.22, 0.55)
-    # ax[2].set_yticklabels([])
     ax[2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.2))
-    ax[2].set_title("CH-LGN: examples", fontsize=16)
-
-    yt = ax[3].get_yticks()
+    ax[2].set_title("CH-LGN: Pair $(ex_id)", fontsize=16)
 
     ax[3].set_ylim(-0.15, 0.4)
-    # ax[4].set_ylim(-0.15, 0.4)
-    # ax[4].set_yticklabels([])
     ax[4].set_title("CH-LGN: Population", fontsize=16)
+    ax[6].set_title("CH-LGN: Awake", fontsize=16)
 
-    labels = ["A","B","C","D"]
-    for k in 1:4
+
+    labels = ["A","B","C","D","E","F"]
+    for k in 1:length(ax)
         if mod(k, 2) == 0
-            ax[k].legend(frameon=false, fontsize=14)
             Plot.axes_label(h, ax[k], labels[k], -0.23)
         else
+            ax[k].legend(frameon=false, fontsize=14)
             ax[k].set_ylabel("Filter weight (A.U.)", fontsize=14)
             Plot.axes_label(h, ax[k], labels[k])
         end
-        if 2 < k < 5
+        if k > 4
             ax[k].set_xlabel("Time before spike (seconds)", fontsize=14)
         end
         ax[k].set_xlim(t_xf[1]-0.004, t_xf[end]+0.004)
