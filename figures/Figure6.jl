@@ -177,6 +177,9 @@ function make_figure(d; show_inset::Bool=true, color_scheme::String="grwhpu", io
 
     labels = ["A","B","C","D"]
     foreach((k,l)->Plot.axes_label(h, ax[k], l), [1,2,4,5], labels)
+    foreach([1,4]) do k
+        ax[k].set_xlim(-0.204, ax[k].get_xlim()[2])
+    end
 
     h.text(0.5, 0.995, "Binary white noise", fontsize=24, color=BLUE, horizontalalignment="center", verticalalignment="top")
     h.text(0.5, 0.5, "Gratings", fontsize=24, color=RED, horizontalalignment="center", verticalalignment="top")
@@ -253,7 +256,7 @@ function filter_plot(d::Dict{String,Any}, t::AbstractVector{<:Real}, typ, name::
         plot_with_error(t, val, lo, hi, RGB(col...), ax, linewidth=3, label=label, ferr=4.0)
 
         if inset_length > 0
-            ki = length(t)-inset_length:length(t)
+            ki = length(t)-inset_length+1:length(t)
             plot_with_error(t[ki], val[ki], lo[ki], hi[ki], RGB(col...), sax, linewidth=3, ferr=4.0)
             mn = minimum(lo[ki])
             mx = maximum(hi[ki])
@@ -265,7 +268,7 @@ function filter_plot(d::Dict{String,Any}, t::AbstractVector{<:Real}, typ, name::
         ax.plot(t, mean(tmp, dims=2), linewidth=3.5, color=col, label=label, zorder=100)
 
         if inset_length > 0
-            ki = length(t)-inset_length:length(t)
+            ki = length(t)-inset_length+1:length(t)
             tmp = PaperUtils.normalize(d[typ]["xf_"*name])[ki,:]
             sax.plot(t[ki], tmp, linewidth=1.5, color=light_col)
             sax.plot(t[ki], mean(tmp, dims=2), linewidth=3.5, color=col, label=label, zorder=100)

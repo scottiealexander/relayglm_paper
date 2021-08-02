@@ -159,7 +159,7 @@ function basic_stats(x::AbstractVector{<:Real}, method::Symbol=:median; io::IO=s
         val, lo, hi = confint(bmean(x), BCaConfInt(0.95), 1)
         sd = ste(x)
         s1 = "mean"
-        s2 = "std"
+        s2 = "ste"
     elseif method == :median
         val, lo, hi = confint(bmedian(x), BCaConfInt(0.95), 1)
         sd = mad(x)

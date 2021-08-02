@@ -121,12 +121,34 @@ function make_figure(d::Dict{String,Any})
     ax[2].set_xlim(t_rh[1] - 0.005, t_rh[end] + 0.008)
     ax[2].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.05))
 
+    ki = findall(!isequal(200001250), d["ids"])
+
     mnl, mxl = filter_plot(t_rh, d["rh_lo"], ax[2], sax, GREEN, "Low", inset_length)
     mnh, mxh = filter_plot(t_rh, d["rh_hi"], ax[2], sax, PURPLE, "High", inset_length)
     mn = min(mnl, mnh)
     mx = max(mxl, mxh)
 
     Figure6.inset_box(t_rh, mn, mx, ax[2], inset_length)
+
+    # k = findfirst(isequal(200001250), d["ids"])
+    # kt = length(t_rh)-inset_length+1:length(t_rh)
+    # sax.plot(t_rh[kt], PaperUtils.normalize(d["rh_lo"])[kt, k], linewidth=1.5, linestyle="--", color=GREEN)
+    # sax.plot(t_rh[kt], PaperUtils.normalize(d["rh_hi"])[kt, k], linewidth=1.5, linestyle="--", color=PURPLE)
+
+    # ax[2].plot(t_rh, PaperUtils.normalize(d["rh_lo"])[:, k], linewidth=1.5, linestyle="--", color=GREEN)
+    # ax[2].plot(t_rh, PaperUtils.normalize(d["rh_hi"])[:, k], linewidth=1.5, linestyle="--", color=PURPLE)
+
+
+    # draw two arrows pointing to the filters learned from pair 200001250, which
+    # is the only pair (so far as I know) that actually had a controled stimulus
+    # which happened to be a grating
+    t = matplotlib.markers.MarkerStyle(marker="\$\\uparrow\$")
+
+    t._transform = t.get_transform().rotate_deg(65)
+    sax.scatter(-0.0085, -0.13, marker=t, s=100, c=reshape(RED, 1, :))
+
+    t._transform = t.get_transform().rotate_deg(-65)
+    sax.scatter(-0.014, -0.062, marker=t, s=100, c=reshape(RED, 1, :))
 
     ax[2].set_xlabel("Time before spike (seconds)", fontsize=14)
     ax[2].set_ylabel("Filter weight (A.U.)", fontsize=14)
@@ -259,11 +281,10 @@ function filter_plot(t, xf, ax, sax, col, label, inset_length)
     mn, mx = 0, 0
 
     if inset_length > 0
-        ki = length(t)-inset_length:length(t)
-        tmp = PaperUtils.normalize(xf)[ki,:]
-        sax.plot(t[ki], tmp, linewidth=1.5, color=light_col)
-        sax.plot(t[ki], mean(tmp, dims=2), linewidth=3.5, color=col, label=label, zorder=100)
-        mn, mx = extrema(tmp) .* 1.05
+        ki = length(t)-inset_length+1:length(t)
+        sax.plot(t[ki], tmp[ki,:], linewidth=1.5, color=light_col)
+        sax.plot(t[ki], mean(tmp[ki,:], dims=2), linewidth=3.5, color=col, label=label, zorder=100)
+        mn, mx = extrema(tmp[ki,:]) .* 1.05
     end
 
     return mn, mx
