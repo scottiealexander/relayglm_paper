@@ -67,7 +67,7 @@ Figure3.make_figure(d3, 208)
 
 # ============================================================================ #
 # recreate figures 4 & 5
-using Figure45, RelayGLM
+using Figure45
 
 d45 = Figure45.collate_data()
 
@@ -75,7 +75,7 @@ Figure45.make_figure(d45)
 
 # ============================================================================ #
 # recreate figure 6
-using Figure6, RelayGLM
+using Figure6
 
 # we can specify the time window durations to use for RGC spike partitioning
 # here we use 100 ms (or 0.1 sec) which is what the Figure6 in the paper uses
@@ -120,15 +120,15 @@ FigureS2.make_figure(ds2)
 # recreate figure S3
 using FigureS3
 
-d = FigureS3.collate_data()
-FigureS3.make_figure(d)
+ds3 = FigureS3.collate_data()
+FigureS3.make_figure(ds4)
 
 # ============================================================================ #
 # recreate figure S4
 using FigureS4
 
-d = FigureS4.collate_data()
-FigureS4.make_figure(d)
+ds4 = FigureS4.collate_data()
+FigureS4.make_figure(ds4)
 
 ```
 
