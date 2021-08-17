@@ -118,7 +118,7 @@ function figure_ab(d, ax; io::IO=stdout, inc::Symbol=:all)
 
     yl = isempty(z) ? "" : "Residual "
 
-    ax[3].set_ylabel(yl * "\$\\Delta \\mathcal{I}_{Bernoulli}\$ (RH - CH)", fontsize=14)
+    ax[3].set_ylabel(yl * "\$\\Delta \\mathcal{I}_{Bernoulli}\$ (CH - RH)", fontsize=14)
     yl = yl * "CH - RH"
 
     ax[4].set_xticks([0.05, 0.7])
