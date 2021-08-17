@@ -138,6 +138,7 @@ The non-registered dependencies on which this code relies are automatically inst
 
 * [RelayGLM.jl](https://github.com/scottiealexander/RelayGLM.jl.git)
 * [PairsDB.jl](https://github.com/scottiealexander/PairsDB.jl.git)
+* [WeyandDB.jl](https://github.com/scottiealexander/WeyandDB.jl.git)
 
 ## License
 
