@@ -145,15 +145,15 @@ function distribution(bs::Bootstrap.BootstrapSample, ax; x::Real=0, y::Real=0,
         ytl = yt .- y
 
         rn = -1
-        if ytl[end] - ytl[1] < 0.2
-            rn = -2
-        elseif ytl[end] - ytl[1] < 0.02
+        if abs(ytl[end] - ytl[1]) < 0.02
             rn = -3
+        elseif abs(ytl[end] - ytl[1]) < 0.2
+            rn = -2
         end
 
         # tick labels
-        for k in eachindex(ytl)
-            ax.text(x + pad3 + 0.015, yt[k], string(roundn(ytl[k], rn)), fontsize=10, verticalalignment="center", horizontalalignment="left")
+        for k in 1:size(yt, 2)
+            ax.text(x + pad3 + 0.015, yt[1, k], string(roundn(ytl[1, k], rn)), fontsize=10, verticalalignment="center", horizontalalignment="left")
         end
 
         ax.plot([2 + xoffset, x + pad2], y .+ [val, val], "--", color="black", linewidth=1)
