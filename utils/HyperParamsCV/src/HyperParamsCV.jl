@@ -236,9 +236,9 @@ function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id:
 
     isi, relay_status = RelayISI.spike_status(ret, lgn)
 
-    res_isi = RRI(nfold)
-    res_ff = RRI(nfold)
-    res_fr = RRI(nfold)
+    res_isi = RRI(nfold, length(ret))
+    res_ff = RRI(nfold, length(ret))
+    res_fr = RRI(nfold, length(ret))
 
     sigmas = zeros(nfold)
     isimaxes = zeros(nfold)
@@ -265,7 +265,7 @@ function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id:
         # isi model:
         sigma, isimax, rii_isi, edges, eff = train_isi_model(isi, relay_status, idxtrain)
         pred_isi = test_isi_model(edges, eff, isi[idxtest])
-        GLMMetrics.eval_and_store!(res_isi, relay_status[idxtest], pred_isi, k)
+        GLMMetrics.eval_and_store!(res_isi, relay_status[idxtest], pred_isi, k, idxtest)
 
         sigmas[k] = sigma
         isimaxes[k] = isimax
@@ -286,7 +286,7 @@ function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id:
 
         # test!
         pred_ff = test_glm_model(Logistic, test_ff, coef_ff)
-        GLMMetrics.eval_and_store!(res_ff, relay_status[idxtest], pred_ff, k)
+        GLMMetrics.eval_and_store!(res_ff, relay_status[idxtest], pred_ff, k, idxtest)
 
         spans_ff[k] = span_ff
         lms_ff[k] = lm_ff[1]
@@ -304,7 +304,7 @@ function nested_cv(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, id:
         test_fr = glm_data(glm_fr, idxtest)
 
         pred_fr = test_glm_model(Logistic, test_fr, coef_fr)
-        GLMMetrics.eval_and_store!(res_fr, relay_status[idxtest], pred_fr, k)
+        GLMMetrics.eval_and_store!(res_fr, relay_status[idxtest], pred_fr, k, idxtest)
 
         spans_fr[k] = span_fr
         nbs_fr[k] = nb_fr

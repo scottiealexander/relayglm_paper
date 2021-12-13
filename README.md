@@ -112,7 +112,7 @@ using FigureS2
 ds2 = d45
 
 # otherwise...
-ds2 = FigureS1.collate_data()
+ds2 = FigureS2.collate_data()
 
 FigureS2.make_figure(ds2)
 
