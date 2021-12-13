@@ -38,4 +38,5 @@ function install_dependencies(local_env::Bool=true)
     Pkg.add(PackageSpec(url="https://github.com/scottiealexander/SpkCore.jl.git"))
     Pkg.add(PackageSpec(url="https://github.com/scottiealexander/RelayGLM.jl.git"))
     Pkg.add(PackageSpec(url="https://github.com/scottiealexander/PairsDB.jl.git"))
+    Pkg.add(PackageSpec(url="https://github.com/scottiealexander/WeyandDB.jl.git"))
 end
