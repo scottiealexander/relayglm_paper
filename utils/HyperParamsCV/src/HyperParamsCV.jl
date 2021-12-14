@@ -400,15 +400,18 @@ function collate_data(iids::AbstractVector{<:Integer}=Int[], logdir::AbstractStr
             d[type][id]["isi"]["sigma"] = Vector{Float64}(sigma)
             d[type][id]["isi"]["isimax"] = Vector{Float64}(isimaxes)
             d[type][id]["isi"]["rri"] = res_isi.x
+            d[type][id]["isi"]["prediction"] = res_isi.pred
 
             d[type][id]["ff"]["span"] = Vector{Float64}(span_ff)
             d[type][id]["ff"]["lm"] = lm_ff
             d[type][id]["ff"]["rri"] = res_ff.x
+            d[type][id]["ff"]["prediction"] = res_ff.pred
 
             d[type][id]["fr"]["span"] = Vector{Float64}(span_fr)
             d[type][id]["fr"]["nbasis"] = Vector{Float64}(nb_fr)
             d[type][id]["fr"]["lm"] = lm_fr
             d[type][id]["fr"]["rri"] = res_fr.x
+            d[type][id]["fr"]["prediction"] = res_fr.pred
 
             elap = time() - t1
             clear_lines_above(4)
