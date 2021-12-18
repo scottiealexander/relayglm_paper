@@ -462,6 +462,24 @@ function merge_dicts!(out::Dict{String,<:Any}, data::Vector{<:Dict}, fields::Vec
     return out
 end
 # ============================================================================ #
+function merge_all(data::Vector{<:Dict})
+
+    out = Dict{String,Any}()
+
+    for d in data
+        for typ in keys(d)
+            if !haskey(out, typ)
+                out[typ] = Dict{Int,Any}()
+            end
+            for id in keys(d[typ])
+                out[typ][id] = d[typ][id]
+            end
+        end
+    end
+
+    return out
+end
+# ============================================================================ #
 function parameter_dict(data::Vector{Dict{String,Any}})
     out = Dict{Int,Any}()
     return parameter_dict!(out, data)

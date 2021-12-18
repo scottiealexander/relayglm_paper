@@ -12,7 +12,7 @@ export pvalue
 export Both, Left, Right
 # ============================================================================ #
 
-nanfun(fun::Function, x::Vector{<:Real}) = fun(filter(!isnan, x))
+nanfun(fun::Function, x::Vector{<:Real}; dims::Integer=1) = fun(filter(!isnan, x))
 
 function nanfun(fun::Function, x::Matrix{<:Real}; dims::Integer=1)
     return mapslices(x->nanfun(fun, x), x, dims=dims)
@@ -21,10 +21,10 @@ end
 ste(x::AbstractVector{<:Real}) = Statistics.std(x) ./ sqrt(length(x))
 ste(x::AbstractArray{<:Real}; dims::Integer=1) = Statistics.std(x, dims=dims) ./ sqrt(size(x, dims))
 
-nanmean(x::VecOrMat{<:Real}) = nanfun(mean, x)
-nanstd(x::VecOrMat{<:Real}) = nanfun(Statistics.std, x)
-nanvar(x::VecOrMat{<:Real}) = nanfun(Statistics.var, x)
-nanste(x::VecOrMat{<:Real}) = nanfun(ste, x)
+nanmean(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(mean, x, dims=dims)
+nanstd(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(Statistics.std, x, dims=dims)
+nanvar(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(Statistics.var, x, dims=dims)
+nanste(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(ste, x, dims=dims)
 # ============================================================================ #
 "inter-quartile range"
 iqr(x::AbstractVector{<:Real}) = diff(quantile(x, [0.25, 0.75]))[1]
