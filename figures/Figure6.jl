@@ -13,7 +13,7 @@ const FFSPAN = 200
 
 # ============================================================================ #
 """
-`collate_data(::Type{T}, twin::Real=0.1) where T <: RelayGLM.PerformanceMetric`
+`collate_data(twin::Real=0.1) where T <: RelayGLM.PerformanceMetric`
 
 `twin` - the duration of the time window preceding each target spike over
 which LGN spikes are counted for partitioning
@@ -375,7 +375,7 @@ function bottom_align(ax1, ax2)
     ax1.set_position(b3)
 end
 # ============================================================================ #
-function difference_plot(d; io::IO=stdout)
+function difference_plot(d, typ::String; io::IO=stdout)
 
     col = [GREEN, [0., 0., 0.], PURPLE]
 
@@ -385,7 +385,7 @@ function difference_plot(d; io::IO=stdout)
     h = figure()
     ax = default_axes()
 
-    typ = "msequence"
+    # typ = "msequence"
 
     ax.plot([t[1], t[end]], [0, 0], "--", color="gray", alpha=0.75, linewidth=2)
 
@@ -397,7 +397,7 @@ function difference_plot(d; io::IO=stdout)
         y1 = d[typ]["rri_"*name] .- d[typ]["rri_q1"]
         bs = bmedian(y1)
         val, lo, hi = confint(bs, BCaConfInt(0.95), 1)
-        md = mad(y1)
+        md = SimpleStats.mad(y1)
         _, p = SimpleStats.paired_permutation_test(median, d[typ]["rri_"*name], d[typ]["rri_q1"])
         @printf(io, "\tMedian RRI difference (%s - Q1): %.3f (MAD %.3f 95%% CI [%.3f, %.3f] p = %.4f, n = %d\n", uppercase(name), val, md, lo, hi, p, length(y1))
 

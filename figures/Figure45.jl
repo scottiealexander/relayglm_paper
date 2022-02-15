@@ -107,7 +107,7 @@ function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
         d1 = data(d["msequence"], metric, names[k1][1], exclude)
         d2 = data(d["msequence"], metric, names[k2][1], exclude)
         v, lo, hi = GAPlot.cumming_plot(d1, d2, ax=ax2[:,k], colors=colors[[k1,k2]], dcolor=BLUE)
-        _, p = SimpleStats.paired_permutation_test(median, d1, d2)
+        _, p = SimpleStats.paired_permutation_test(median, d1, d2, 5_000)
 
         er = mad(d1 .- d2)
 
@@ -268,7 +268,7 @@ init_output(::Type{<:RelayGLM.PerformanceMetric}, n::Integer) = Vector{Float64}(
 # ============================================================================ #
 function data(d::Dict, metric::String, typ::String, exc::Vector{Int}=Int[])
 
-    out = d[metric][typ]
+    out = convert(Vector{Float64}, d[metric][typ])
 
     if isempty(exc)
         keep = 1:length(out)
@@ -323,13 +323,13 @@ function descriptive_stats(d::Dict, metric::String; io::IO=stdout)
         else
             kuse = 1:length(ids)
         end
-        for modl in ["isi", "ff", "fb"]
+        for modl in ["isi", "ff", "fr"]
             println(io, uppercase(typ), " - ", uppercase(modl))
-            data = d[typ][metric][modl][kuse]
+            data = convert(Vector{Float64}, d[typ][metric][modl][kuse])
             bs = bmedian(data)
             val, lo, hi = confint(bs, BCaConfInt(0.95), 1)
 
-            @printf(io, "\tMedian %s: %.3f bits/event (MAD %.3f 95%% CI [%.3f, %.3f])\n", uppercase(metric), val, mad(data), lo, hi)
+            @printf(io, "\tMedian %s: %.3f bits/event (MAD %.3f 95%% CI [%.3f, %.3f])\n", uppercase(metric), val, mad(data)[1], lo, hi)
         end
         println(io, "*"^40)
     end

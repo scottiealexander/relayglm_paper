@@ -69,7 +69,7 @@ function filter_ci(x::Matrix{<:Real})
     lo = copy(val)
 
     for k = 1:size(x, 1)
-        bs = bmean(x[k,:])
+        bs = bmean(filter(!isnan, x[k,:]))
         val[k], lo[k], hi[k] = confint(bs, BCaConfInt(0.95), 1)
     end
     return val, lo, hi

@@ -4,7 +4,7 @@ using Statistics, Random, Bootstrap
 import Statistics
 
 export ste, mad, iqr, circular_var, spearman, cor_partial
-export nanmean, nanstd, nanste, nanvar
+export nanmean, nanstd, nanste, nanvar, nanmedian, nanmad
 export bmean, bmedian, bcor, bspearman, bcor_partial
 export permutation_test, paired_permutation_test
 export pvalue
@@ -25,12 +25,15 @@ nanmean(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(mean, x, dims=dims)
 nanstd(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(Statistics.std, x, dims=dims)
 nanvar(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(Statistics.var, x, dims=dims)
 nanste(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(ste, x, dims=dims)
+nanmedian(x::VecOrMat{<:Real}; dims::Integer=1) = nanfun(median, x, dims=dims)
 # ============================================================================ #
 "inter-quartile range"
 iqr(x::AbstractVector{<:Real}) = diff(quantile(x, [0.25, 0.75]))[1]
 
 "median absolute deviation"
 mad(x::Vector{<:Real}) = median(abs.(x .- median(x)))
+mad(x::Matrix{<:Real}; dims::Integer=1) = median(abs.(x .- median(x; dims=dims)); dims=dims)
+nanmad(x::VecOrMat{<:Real}; dims::Integer=1) = nanmedian(abs.(x .- nanmedian(x; dims=dims)); dims=dims)
 # ============================================================================ #
 "circular variance"
 circular_var(x::AbstractVector{<:Real}, w::AbstractVector{<:Real}=ones(length(x))) = 1.0 - resultant(x, w)

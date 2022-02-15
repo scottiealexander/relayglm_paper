@@ -4,9 +4,9 @@ using Figure6, Plot, GAPlot, SimpleStats, UCDColors, RelayGLM.RelayUtils
 using PyPlot, KernelDensity, StatsBase, Bootstrap, Printf, Statistics
 
 # ============================================================================ #
-collate_data() = Figure6.collate_data(RRI, 0.1)
+collate_data() = Figure6.collate_data(0.1)
 # ============================================================================ #
-function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(3))
+function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(3), twin::Symbol=:all)
 
     row_height = [1.0]
     row_spacing = [0.12, 0.14]
@@ -27,7 +27,7 @@ function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(
     absd = zeros(length(ids), 2)
 
     len = size(d["grating"]["xf_q1"], 1)
-    kt = 1:len #len-30:len
+    kt = twin == :all ? (1:len) : (len-30:len)
 
     append!(offsets, zeros(3 - length(offsets)))
 

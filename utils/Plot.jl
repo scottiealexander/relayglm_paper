@@ -18,6 +18,11 @@ function plot_with_error(x::RealVec, y::RealVec, yerr::RealVec,
     return plot_with_error(x, y, y.-yerr, y.+yerr, col, ax; args...)
 end
 # ---------------------------------------------------------------------------- #
+function plot_with_error(x::RealVec, y::RealVec, yerr::RealVec,
+    col::RealVec, ax=nothing; args...)
+    return plot_with_error(x, y, y.-yerr, y.+yerr, ColorTypes.RGB(col[1], col[2], col[3]), ax; args...)
+end
+# ---------------------------------------------------------------------------- #
 function plot_with_error(x::RealVec, y::RealVec, ylo::RealVec, yhi::RealVec,
     col::ColorTypes.RGB, ax=nothing; linewidth=4.0, alpha=0.5, label="", ferr=6.0, args...)
     if ax == nothing

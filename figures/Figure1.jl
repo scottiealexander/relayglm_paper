@@ -1,7 +1,7 @@
 module Figure1
 
-using PaperUtils
-using DatabaseWrapper, SpkTuning, SpkCore, Plot, UCDColors, MSequenceUtils, MSequence
+using PaperUtils #, SpkTuning,
+using DatabaseWrapper, SpkCore, Plot, UCDColors, MSequenceUtils, MSequence
 using Statistics, PyPlot, Printf, ImageFiltering
 
 # ============================================================================ #

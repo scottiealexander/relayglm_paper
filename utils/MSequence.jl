@@ -72,4 +72,34 @@ function sta(ts::Vector{Float64}, evt::Vector{Float64}, seq::Vector{<:Real}, ifi
     return (rf ./ nframe) ./ ifi
 end
 # ============================================================================ #
+function sta(ts::Vector{Float64}, wi::Vector{Float64}, evt::Vector{Float64}, seq::Vector{<:Real}, ifi::AbstractFloat)
+
+    mseq = MSeq(seq)
+    rf = zeros(16,16,16)
+    last = 1
+    nframe = 0
+    klast = lastindex(ts)
+    for k in eachindex(evt)
+        # index of first spike >= frame onset time
+        ks = searchsortedfirst(view(ts, last:klast), evt[k]) + last - 1
+
+        # index of last spike that is <= frame offset time
+        kl = searchsortedlast(view(ts, ks:klast), evt[k] + ifi) + ks - 1
+
+        # number of spikes (length(ks:kl))
+        n = kl - ks + 1
+        if n > 0
+            w = maximum(wi[ks:kl])
+            for j = 0:min(15, k-1)
+                rf[:,:,j+1] .+= (get_frame(mseq, k - j) .* w)
+            end
+            last = kl + 1
+            nframe += 1
+        end
+    end
+
+    # transform units to mean spikes-per-second
+    return (rf ./ nframe) ./ ifi
+end
+# ============================================================================ #
 end
