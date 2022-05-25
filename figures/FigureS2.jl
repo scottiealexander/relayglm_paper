@@ -4,7 +4,7 @@ using PyPlot, Plot, Statistics, SimpleStats, SimpleFitting, UCDColors, Printf
 using GAPlot, DatabaseWrapper, RelayGLM
 import PaperUtils, Figure45
 # ============================================================================ #
-@enum SpikeType AllSpikes TriggeredSpikes
+@enum SpikeType AllSpikes TriggeredSpikes NoncardinalSpikes
 const Strmbol = Union{String,Symbol}
 # ============================================================================ #
 collate_data() = Figure45.collate_data();
@@ -232,7 +232,7 @@ function single_figure(d, metric::String, f1::String, f2::String, ax1, ax2, colo
     return (val, p, lo, hi)
 end
 # ============================================================================ #
-function get_burst_percent(d::Dict, type::String, denom::SpikeType=AllSpikes)
+function get_burst_percent(d::Dict, type::String, denom::SpikeType=NoncardinalSpikes)
 
     tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)",
         "msequence" => "msequence", "awake" => :weyand)
@@ -254,9 +254,11 @@ function get_burst_percent(d::Dict, type::String, denom::SpikeType=AllSpikes)
         # spikes in the k'th burst
         kb = PaperUtils.burst_spikes(lgn, 0.004, 0.1)
 
-        if denom == AllSpikes
-            # number of *non-cardinal* burst spikes
-            nnc = map(x->length(x)-1, kb)
+        if denom == AllSpikes || denom == NoncardinalSpikes
+            # for number of *non-cardinal* burst spikes we subtract 1 from the
+            # total number of spikes in the burst, otherwise just count em' all
+            p = denom == AllSpikes ? 0 : 1
+            nnc = map(x->length(x) - p, kb)
 
             burst_pct[k] = (sum(nnc) / length(lgn)) * 100.0
 

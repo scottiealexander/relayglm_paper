@@ -1,4 +1,4 @@
-module Figure6
+module FigureS8
 
 using DatabaseWrapper, RelayGLM, Progress, SpkCore, SimpleStats
 using PaperUtils, UCDColors, Plot, GAPlot
@@ -45,15 +45,7 @@ function collate_data(;twin::Real=0.1)
         for q in 1:npct
             name = "q" * string(q)
             d[type]["xf_" * name] = Matrix{Float64}(undef, FFSPAN, length(db))
-            d[type]["efficacy_" * name] = Vector{Float64}(undef, length(db))
-            d[type]["contribution_" * name] = Vector{Float64}(undef, length(db))
             d[type][key * "_" * name] = init_output(RRI, length(db))
-            d[type]["nlli_" * name] = Vector{Float64}(undef, length(db))
-
-            if q == 1
-                d[type]["nret"] = Vector{Float64}(undef, length(db))
-                d[type]["nlgn"] = Vector{Float64}(undef, length(db))
-            end
         end
 
         show_progress(0.0, 0, "$(type): ", "(0 of $(length(db)))")
@@ -62,23 +54,24 @@ function collate_data(;twin::Real=0.1)
             t1 = time()
             ret, lgn, _, _ = get_data(db, k)
 
+            status = wasrelayed(ret, lgn)
+            result, glm = run_one(RRI, 1:length(ret), ret, status, bin_size)
+
+            pred = generate_prediction(glm, result.coef)
+            status_sim = simulate_relay_status(pred)
+
+            # assign retina spike to quartile based on LGN firing rate within
+            # <twin> as is done in the original figure 7
             kq = rate_split(ret, lgn, round(Int, twin / bin_size), npct)
 
             for q in 1:npct
                 name = "q" * string(q)
                 kspk = kq[q]
-                ef, cn, nret, nlgn = stats(ret, lgn, kspk, FFSPAN)
-                res = run_one(RRI, kspk, ret, lgn, bin_size)
-                d[type]["xf_" * name][:,k] = get_coef(res, :ff)
-                d[type]["efficacy_" * name][k] = ef
-                d[type]["contribution_" * name][k] = cn
-                d[type][key * "_" * name][k] = mean(res.metric)
-                d[type]["nlli_" * name][k] = res.nlli
 
-                if q == 1
-                    d[type]["nret"][k] = nret
-                    d[type]["nlgn"][k] = nlgn
-                end
+                res, _ = run_one(RRI, kspk, ret, status_sim, bin_size)
+
+                d[type]["xf_" * name][:,k] = get_coef(res, :ff)
+                d[type][key * "_" * name][k] = mean(res.metric)
             end
 
             elap = time() - t1
@@ -87,6 +80,103 @@ function collate_data(;twin::Real=0.1)
         println()
     end
     return d
+end# ============================================================================ #
+function collate_data2(;twin::Real=0.1, niter::Integer=1)
+
+    bin_size = 0.001
+    npct = 4
+
+    d = Dict{String, Any}()
+    tmp = ["grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand]
+
+    key = RelayGLM.key_name(RRI)
+
+    for (type, ptrn) in tmp
+        exc = copy(PaperUtils.EXCLUDE[type])
+        if type == "msequence"
+            push!(exc, 102)
+        end
+
+        db = get_database(ptrn, id -> !in(id, exc))
+        d[type] = Dict{String, Any}()
+        d[type]["ids"] = get_ids(db)
+
+        if type == "awake"
+            npct = 2
+        end
+
+        for q in 1:npct
+            name = "q" * string(q)
+            d[type]["xf_" * name] = Matrix{Float64}(undef, FFSPAN, length(db))
+            d[type][key * "_" * name] = init_output(RRI, length(db))
+        end
+
+        d[type]["ird"] = zeros(length(db))
+
+        show_progress(0.0, 0, "$(type): ", "(0 of $(length(db)))")
+
+        for k in 1:length(db)
+            t1 = time()
+            ret, lgn, _, _ = get_data(db, k)
+
+            status = wasrelayed(ret, lgn)
+            result, glm = run_one(RRI, 1:length(ret), ret, status, bin_size)
+
+            pred = generate_prediction(glm, result.coef)
+
+            # assign retina spike to quartile based on LGN firing rate within
+            # <twin> as is done in the original figure 7
+            kq = rate_split(ret, lgn, round(Int, twin / bin_size), npct)
+
+            tmp = Dict{String,Any}()
+            for q in 1:npct
+                name = "q" * string(q)
+                tmp["xf_"*name] = zeros(FFSPAN, niter)
+                tmp[key * "_" * name] = zeros(niter)
+            end
+
+            for j in 1:niter
+
+                status_sim = simulate_relay_status(pred)
+
+                for q in 1:npct
+                    name = "q" * string(q)
+                    kspk = kq[q]
+
+                    res, _ = run_one(RRI, kspk, ret, status_sim, bin_size)
+
+                    tmp["xf_" * name][:,j] = get_coef(res, :ff)
+                    tmp[key * "_" * name][j] = mean(res.metric)
+                end
+
+                hi_name = "xf_q"*string(npct)
+                ad = assess(tmp[hi_name], tmp["xf_q1"], ird)
+                d[type]["ird"][k] = mean(ad)
+
+                for q in 1:npct
+                    name = "q" * string(q)
+                    d[type]["xf_"*name][:,k] .= vec(mean(tmp["xf_"*name], dims=2))
+                    d[type][key * "_" * name][k] = mean(tmp[key * "_" * name])
+                end
+
+            end
+
+            elap = time() - t1
+            show_progress(k/length(db), 0, "$(type): ", "($(k) of $(length(db)) @ $(elap))")
+        end
+        println()
+    end
+    return d
+end
+# ============================================================================ #
+ird(x::Vector{<:Real}, y::Vector{<:Real}) = RelayUtils.trapz(abs.(x .- y)) .* 0.001
+# ============================================================================ #
+function assess(hi::Matrix{<:Real}, lo::Matrix{<:Real}, f::Function)
+   r = zeros(size(hi, 2))
+   for k in eachindex(r)
+       r[k] = f(hi[:,k], lo[:,k])
+   end
+   return r
 end
 # ============================================================================ #
 function make_figure(d; show_inset::Bool=true, color_scheme::String="grwhpu", io::IO=stdout)
@@ -197,7 +287,7 @@ function plot_one(d, typ, ax, colors, xv; inset_length::Integer=30, yloc::Real=0
     N = length(filter(x->match(r"xf_q\d", x) != nothing, keys(d[typ])))
 
     if inset_length > 0
-        sax = add_subplot_axes(ax[1], [0.35, 0.45, 0.35, 0.55])
+        sax = add_subplot_axes(ax[1], [0.35, 0.55, 0.35, 0.55])
         default_axes(sax)
         sax.set_yticklabels([])
         ki = length(t)-inset_length
@@ -286,16 +376,14 @@ function format_filter_plot(ax, yloc::Real=0.5)
     ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(yloc))
 end
 # ============================================================================ #
-function run_one(::Type{T}, kuse::AbstractVector{<:Integer}, ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, bin_size::Real) where T <: RelayGLM.PerformanceMetric
-
-    response = wasrelayed(ret[kuse], lgn)
+function run_one(::Type{T}, kuse::AbstractVector{<:Integer}, ret::AbstractVector{<:Real}, status::AbstractVector{<:Real}, bin_size::Real) where T <: RelayGLM.PerformanceMetric
 
     ps = PredictorSet()
     ps[:ff] = Predictor(ret, ret[kuse], CosineBasis(length=FFSPAN, offset=2, nbasis=16, b=10, ortho=false, bin_size=bin_size))
     lm = 2.0 .^ range(-3.5, 3, length=5)
-    glm = GLM(ps, response, RidgePrior, [lm])
+    glm = GLM(ps, status[kuse], RidgePrior, [lm])
 
-    return cross_validate(T, Binomial, Logistic, glm, nfold=10, shuffle_design=true)
+    return cross_validate(T, Binomial, Logistic, glm, nfold=10, shuffle_design=true), glm
 end
 # ============================================================================ #
 function filter_stats(f1::AbstractVector{<:Real}, f2::AbstractVector{<:Real}, bin_size::Real)
@@ -375,72 +463,21 @@ function bottom_align(ax1, ax2)
     ax1.set_position(b3)
 end
 # ============================================================================ #
-function difference_plot(d, typ::String; io::IO=stdout)
-
-    col = [GREEN, [0., 0., 0.], PURPLE]
-
-    len = size(d["grating"]["xf_q1"], 1)
-    t = range(-len*0.001, -0.001, length=len)
-
-    h = figure()
-    ax = default_axes()
-
-    # typ = "msequence"
-
-    ax.plot([t[1], t[end]], [0, 0], "--", color="gray", alpha=0.75, linewidth=2)
-
-    for q in 2:4
-        name = "q" * string(q)
-        val, lo, hi = filter_ci(d[typ]["xf_q1"] .- d[typ]["xf_"*name])
-        plot_with_error(t, val, lo, hi, RGB(col[q-1]...), ax, linewidth=3, label="Q1-" * uppercase(name), ferr=5.0)
-
-        y1 = d[typ]["rri_"*name] .- d[typ]["rri_q1"]
-        bs = bmedian(y1)
-        val, lo, hi = confint(bs, BCaConfInt(0.95), 1)
-        md = SimpleStats.mad(y1)
-        _, p = SimpleStats.paired_permutation_test(median, d[typ]["rri_"*name], d[typ]["rri_q1"])
-        @printf(io, "\tMedian RRI difference (%s - Q1): %.3f (MAD %.3f 95%% CI [%.3f, %.3f] p = %.4f, n = %d\n", uppercase(name), val, md, lo, hi, p, length(y1))
-
-    end
-
-    ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.025))
-    ax.set_xlabel("Time before spike (seconds)", fontsize=14)
-    ax.set_ylabel("Filter weight difference (A.U.)", fontsize=14)
-    ax.legend(frameon=false, fontsize=14, loc="upper left")
-
-    h.tight_layout()
-
-    return h
+function generate_prediction(glm::RelayGLM.AbstractGLM, coef::AbstractVector{<:Real})
+    X = RelayGLM.generate(RelayGLM.predictors(glm))
+    return RelayUtils.logistic_turbo!(X * coef)
 end
 # ============================================================================ #
-function firingrate_variability(win::Integer=FFSPAN)
-    tmp = ["grating" => "(?:contrast|area|grating)", "msequence"=>"msequence"]
-
-    dbs = map(tmp) do pair
-        type, ptrn = pair
-        get_database(ptrn, id -> !in(id, PaperUtils.EXCLUDE[type]))
+function simulate_relay_status(pred::AbstractVector{<:Real})
+    status = Vector{Bool}(undef, length(pred))
+    return simulate_relay_status!(status, pred)
+end
+# ---------------------------------------------------------------------------- #
+function simulate_relay_status!(status::Vector{Bool}, pred::AbstractVector{<:Real})
+    @inbounds for k in eachindex(pred)
+        status[k] = rand() <= pred[k] ? true : false
     end
-
-    # only consider pairs that have both grating and msequence data
-    ids = intersect(get_ids(dbs[1]), get_ids(dbs[2]))
-
-    out = Dict()
-    for (k, db) in enumerate(dbs)
-        out[tmp[k].first] = zeros(length(ids))
-
-        for j in eachindex(ids)
-            ret, _, _, _ = get_data(db, id=ids[j])
-
-            # number of retinal spikes preceding each retinal spike w/in a
-            # <win> length window
-            p, _ = psth(ret, ret, -win:-1, 0.001)
-            nr = vec(sum(p, dims=1))
-
-            out[tmp[k].first][j] = std(nr ./ (win * 0.001))
-        end
-    end
-
-    return out
+    return status
 end
 # ============================================================================ #
 end

@@ -4,7 +4,7 @@ using Figure6, Plot, GAPlot, SimpleStats, UCDColors, RelayGLM.RelayUtils
 using PyPlot, KernelDensity, StatsBase, Bootstrap, Printf, Statistics
 
 # ============================================================================ #
-collate_data() = Figure6.collate_data(0.1)
+collate_data() = Figure6.collate_data(twin=0.1)
 # ============================================================================ #
 function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(3), twin::Symbol=:all)
 
