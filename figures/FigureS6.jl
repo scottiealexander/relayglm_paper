@@ -1,7 +1,156 @@
 module FigureS6
 
-using PyPlot, StatsBase, RelayGLM, RelayGLM.RelayUtils
-using PairsDB, RejectionSampling, Plot
+using PyPlot, StatsBase, RelayGLM, RelayGLM.RelayUtils, PaperUtils
+using DatabaseWrapper, RejectionSampling, Plot, UCDColors, Progress
+
+function collate_data()
+
+    tmp = ["grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand]
+    all_ids = Dict("grating" => [207, 208, 201], "msequence"=>[207, 208, 201], "awake"=>[200009210, 200106030, 200002040])
+
+    d = Dict{String,Any}()
+
+    for (type, ptrn) in tmp
+        db = get_database(ptrn, id -> !in(id, PaperUtils.EXCLUDE[type]))
+
+        # eff = get_efficacy(db)
+        # ks = sortperm(eff, rev=true)
+        # ids = get_ids(db)[ks[1:3]]
+
+        ids = all_ids[type]
+
+        d[type] = Dict{String, Any}()
+
+        d[type]["ids"] = ids
+        d[type]["coef"] = zeros(200, length(ids))
+        d[type]["coef_err"] = zeros(200, length(ids))
+        d[type]["sim"] = zeros(200, length(ids))
+        d[type]["sim_err"] = zeros(200, length(ids))
+
+        show_progress(0.0, 0, "$(type): ", "(0 of $(length(ids)))")
+
+        for (k, id) in enumerate(ids)
+            t1 = time()
+            ret, lgn, _, _ = get_data(db, id=id)
+            coef, coef_err, sim, sim_err = run_one(ret, lgn, 200, 20)
+
+            d[type]["coef"][:,k] .= coef
+            d[type]["coef_err"][:,k] .= coef_err
+            d[type]["sim"][:,k] .= sim
+            d[type]["sim_err"][:,k] .= sim_err
+
+            elap = time() - t1
+            show_progress(k/length(ids), 0, "$(type): ", "($(k) of $(length(ids)) @ $(elap))")
+        end
+    end
+
+    return d
+end
+
+function make_figure(d)
+
+    h = figure()
+    h.set_size_inches((10,8))
+
+    rh = [1.0, 1.0, 1.0]
+    rs = [0.08, 0.13, 0.13, 0.08]
+    cw = [1.0, 1.0, 1.0]
+    cs = [0.08, 0.08, 0.08, 0.05]
+
+    ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
+    ax = permutedims(reshape(ax, 3, 3), (2,1))
+
+    foreach(default_axes, ax)
+
+    len = size(d["grating"]["coef"], 1)
+
+    t = -0.201:0.001:-0.002
+
+    for (k, stim) in enumerate(["grating", "msequence", "awake"])
+        for j in 1:size(d[stim]["coef"], 2)
+
+            # plot_with_error(t, d[stim]["coef"][:,j], d[stim]["coef_err"][:,j], PURPLE, ax[k,j], linewidth=2)
+            ax[k,j].plot(t, d[stim]["coef"][:,j], color=PURPLE, linewidth=2, label="true filter")
+            plot_with_error(t, d[stim]["sim"][:,j], d[stim]["sim_err"][:,j], GREEN, ax[k,j], linewidth=2, label="learned filter")
+            ax[k,j].plot([t[1], t[end]], [0,0], "--", color="grey", linewidth=1.5, zorder=-10)
+            ax[k,j].set_title("Pair " * string(d[stim]["ids"][j]), fontsize=16)
+        end
+    end
+
+    foreach(ax[3,:]) do cax
+        cax.set_xlabel("Time before spike (seconds)", fontsize=14)
+    end
+
+    foreach(ax[:,1]) do cax
+        cax.set_ylabel("Filter weight (A.U.)", fontsize=14)
+    end
+
+    ax[1,1].legend(frameon=false, fontsize=14)
+
+    h.text(0.5, 0.99, "Gratings", fontsize=18, color=RED, horizontalalignment="center", verticalalignment="top")
+    h.text(0.5, 0.67, "Binary white noise", fontsize=18, color=BLUE, horizontalalignment="center", verticalalignment="top")
+    h.text(0.5, 0.34, "Awake", fontsize=18, color=GOLD, horizontalalignment="center", verticalalignment="top")
+
+end
+
+function get_efficacy(db)
+    eff = zeros(length(db))
+    for k in 1:length(db)
+        ret, lgn, _, _ = get_data(db, k)
+        status = wasrelayed(ret, lgn)
+        eff[k] = sum(status) / length(ret)
+    end
+    return eff
+end
+
+function run_one(ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, len::Integer=200, niter::Integer=10)
+
+    lm = 2.0 .^ range(1, 12, length=8)
+
+    ps = PredictorSet();
+    ps[:retina] = Predictor(ret, ret, DefaultBasis(length=len, offset=2, bin_size=0.001))
+    response = wasrelayed(ret, lgn)
+    glm = GLM(ps, response, SmoothingPrior, [lm])
+
+    result = cross_validate(RRI, Binomial, Logistic, glm, nfold=10, shuffle_design=true)
+
+    obs_coef = get_coef(result, :retina)
+    obs_error = get_error(result, :retina)
+
+    # sampler object for sampling from the observed RGC's ISI distribution
+    edges = 0.001:0.001:0.2
+    h = fit(Histogram, diff(ret), edges)
+    s = get_sampler(centers(edges), h.weights ./ trapz(h.weights))
+
+    status = Vector{Bool}(undef, length(ret))
+
+    sim_coef = zeros(len, niter)
+
+    for k in 1:niter
+
+        # get simulated RGC spike train
+        isi = RejectionSampling.sample(s, length(ret))
+        sim_ts = cumsum(isi) .+ ret[1]
+
+        ps2 = PredictorSet()
+        ps2[:retina] = Predictor(sim_ts, sim_ts, DefaultBasis(length=len, offset=2, bin_size=0.001))
+        dm = RelayGLM.generate(ps2)
+
+        pred = RelayUtils.logistic_turbo!(dm * result.coef)
+
+        @inbounds for k in eachindex(pred)
+            status[k] = rand() <= pred[k] ? true : false
+        end
+
+        glm2 = GLM(ps2, status, SmoothingPrior, [lm])
+        result2 = cross_validate(RRI, Binomial, Logistic, glm2, nfold=10, shuffle_design=true)
+        sim_coef[:,k] .= get_coef(result2, :retina)
+    end
+
+    val, lo, hi = filter_ci(sim_coef)
+
+    return obs_coef, obs_error, val, hi .- lo
+end
 
 function main()
     db = get_database("(?:contrast|area|grating)")
@@ -48,7 +197,7 @@ function main()
 
     ax[2].plot([t[1], t[end]], [0, 0], "--", linewidth=1, color="gray")
     ax[2].plot(t, get_coef(result, :retina), linewidth=2, label="fit to data")
-    ax[2].plot(t, get_coef(result2, :retina), linewidth=2, label="fit to stimulation")
+    ax[2].plot(t, get_coef(result2, :retina), linewidth=2, label="fit to simulation")
     ax[2].set_title("GLM filters", fontsize=16)
 
     for cax in ax

@@ -10,7 +10,7 @@ import RelayGLM.RelayISI
 const Strmbol = Union{String,Symbol}
 
 # ============================================================================ #
-function collate_data()
+function collate_data(;exclude::Dict{String,Vector{Int}}=PaperUtils.EXCLUDE)
 
     span = 200
     bin_size = 0.001
@@ -22,7 +22,7 @@ function collate_data()
 
     for (type, ptrn) in tmp
 
-        db = get_database(ptrn, id -> !in(id, PaperUtils.EXCLUDE[type]))
+        db = get_database(ptrn, id -> !in(id, exclude[type]))
         d[type] = Dict{String, Any}()
         d[type]["ids"] = get_ids(db)
         d[type]["isi"] = Matrix{Float64}(undef, span-2, length(db))

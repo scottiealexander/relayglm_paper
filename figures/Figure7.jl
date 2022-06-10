@@ -41,7 +41,7 @@ function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(
         lo = d[lab]["xf_q1"]
 
         ad = assess(hi[kt,:], lo[kt,:], ird)
-        ac = kde_lscv(ad, boundary=(-0.02, 0.2))
+        ac = kde_lscv(ad, boundary=(-0.03, 0.23))
 
         e = range(0.0, 0.2, length=16)
         hst = fit(Histogram, ad, e)
@@ -56,7 +56,7 @@ function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(
 
         y = ac.density
 
-        ax[1].plot(ac.x, y, linewidth=3, color=colors[lab], zorder=4, label=labels[k] * " (N=$(size(hi, 2)))")
+        ax[1].plot(ac.x, y, linewidth=3, color=colors[lab], zorder=4, label=labels[k] * "\n(N=$(size(hi, 2)))")
 
         m = median(ad)
         kmn = findfirst(>(m), e) - 1

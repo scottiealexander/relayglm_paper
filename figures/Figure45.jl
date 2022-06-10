@@ -13,6 +13,29 @@ function collate_data()
         joinpath(@__DIR__, "..", "preprocessed_data", "figure45.json"), "r")
 end
 # ============================================================================ #
+# remove all pairs whose I_{Bernoulli} (averaged across models) is below the median
+function filter_by_rri!(d)
+
+    rm = Dict{String,Vector{Int}}()
+
+    for stim in ["grating","msequence"]
+
+        rri = vec(mean(hcat(d[stim]["rri"]["isi"], d[stim]["rri"]["ff"], d[stim]["rri"]["fr"]), dims=2))
+
+        h = floor(Int, length(rri)/2)
+        krm = sort(sortperm(rri)[1:h])
+        rm[stim] = d[stim]["ids"][krm]
+
+        for model in ["isi","ff","fr"]
+            deleteat!(d[stim]["rri"][model], krm)
+        end
+
+        deleteat!(d[stim]["ids"], krm)
+    end
+
+    return d, rm
+end
+# ============================================================================ #
 function collate_data_quick(::Type{T}) where T <: RelayGLM.PerformanceMetric
 
     bin_size = 0.001

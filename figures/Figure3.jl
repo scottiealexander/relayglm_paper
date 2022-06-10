@@ -8,7 +8,7 @@ using Statistics, PyPlot, ColorTypes
 const Strmbol = Union{String,Symbol}
 
 # ============================================================================ #
-function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime::Real=0.1)
+function collate_data(;rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime::Real=0.1, exclude::Dict{String,Vector{Int}}=PaperUtils.EXCLUDE)
 
     d = Dict{String, Any}()
     tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
@@ -19,7 +19,7 @@ function collate_data(rmbursts::Bool=false, burst_isi::Real=0.04, burst_deadtime
 
     for (type, ptrn) in tmp
 
-        db = get_database(ptrn, id -> !in(id, PaperUtils.EXCLUDE[type]))
+        db = get_database(ptrn, id -> !in(id, exclude[type]))
 
         d[type] = Dict{String, Any}()
         d[type]["ids"] = get_ids(db)

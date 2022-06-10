@@ -11,7 +11,7 @@ using SimpleStats, UCDColors
 const Strmbol = Union{String,Symbol}
 
 # ============================================================================ #
-function collate_data(data::Dict{String,Any}=Dict{String,Any}())
+function collate_data(data::Dict=Dict(); exclude::Dict{String,Vector{Int}}=PaperUtils.EXCLUDE)
 
     if isempty(data)
         data = load("../20211216_hp_cv_pred_all.jld")
@@ -29,7 +29,7 @@ function collate_data(data::Dict{String,Any}=Dict{String,Any}())
 
     for (typ, ptrn) in tmp
 
-        db = get_database(ptrn, id -> !in(id, PaperUtils.EXCLUDE[typ]))
+        db = get_database(ptrn, id -> !in(id, exclude[typ]))
 
         out[typ] = Dict{String,Any}()
 
@@ -49,7 +49,7 @@ function collate_data(data::Dict{String,Any}=Dict{String,Any}())
             # out[typ][model]["pred_isi_efficacy"] = fill(NaN, length(isi_bins)-1, npair)
         end
 
-        ids = sort(collect(keys(data[typ])))
+        ids = get_ids(db) #sort(collect(keys(data[typ])))
 
         out[typ]["ids"] = ids
 
@@ -189,8 +189,8 @@ function make_figure(d::Dict{String,Any})
     ax[1,2].legend(frameon=false, fontsize=14)
     ax[3,2].set_xlabel("Inter-spike interval (seconds)", fontsize=14)
 
-    ax[1,2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.03))
-    ax[2,2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.01))
+    ax[1,2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.05))
+    ax[2,2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.02))
 
     # ------------------------------------------------------------------------ #
 

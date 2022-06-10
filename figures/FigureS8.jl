@@ -12,76 +12,7 @@ const Strmbol = Union{String,Symbol}
 const FFSPAN = 200
 
 # ============================================================================ #
-"""
-`collate_data(twin::Real=0.1) where T <: RelayGLM.PerformanceMetric`
-
-`twin` - the duration of the time window preceding each target spike over
-which LGN spikes are counted for partitioning
-"""
-function collate_data(;twin::Real=0.1)
-
-    bin_size = 0.001
-    npct = 4
-
-    d = Dict{String, Any}()
-    tmp = ["grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand]
-
-    key = RelayGLM.key_name(RRI)
-
-    for (type, ptrn) in tmp
-        exc = copy(PaperUtils.EXCLUDE[type])
-        if type == "msequence"
-            push!(exc, 102)
-        end
-
-        db = get_database(ptrn, id -> !in(id, exc))
-        d[type] = Dict{String, Any}()
-        d[type]["ids"] = get_ids(db)
-
-        if type == "awake"
-            npct = 2
-        end
-
-        for q in 1:npct
-            name = "q" * string(q)
-            d[type]["xf_" * name] = Matrix{Float64}(undef, FFSPAN, length(db))
-            d[type][key * "_" * name] = init_output(RRI, length(db))
-        end
-
-        show_progress(0.0, 0, "$(type): ", "(0 of $(length(db)))")
-
-        for k in 1:length(db)
-            t1 = time()
-            ret, lgn, _, _ = get_data(db, k)
-
-            status = wasrelayed(ret, lgn)
-            result, glm = run_one(RRI, 1:length(ret), ret, status, bin_size)
-
-            pred = generate_prediction(glm, result.coef)
-            status_sim = simulate_relay_status(pred)
-
-            # assign retina spike to quartile based on LGN firing rate within
-            # <twin> as is done in the original figure 7
-            kq = rate_split(ret, lgn, round(Int, twin / bin_size), npct)
-
-            for q in 1:npct
-                name = "q" * string(q)
-                kspk = kq[q]
-
-                res, _ = run_one(RRI, kspk, ret, status_sim, bin_size)
-
-                d[type]["xf_" * name][:,k] = get_coef(res, :ff)
-                d[type][key * "_" * name][k] = mean(res.metric)
-            end
-
-            elap = time() - t1
-            show_progress(k/length(db), 0, "$(type): ", "($(k) of $(length(db)) @ $(elap))")
-        end
-        println()
-    end
-    return d
-end# ============================================================================ #
-function collate_data2(;twin::Real=0.1, niter::Integer=1)
+function collate_data(;twin::Real=0.1, niter::Integer=50)
 
     bin_size = 0.001
     npct = 4
@@ -112,6 +43,7 @@ function collate_data2(;twin::Real=0.1, niter::Integer=1)
         end
 
         d[type]["ird"] = zeros(length(db))
+        d[type]["ird_30"] = zeros(length(db))
 
         show_progress(0.0, 0, "$(type): ", "(0 of $(length(db)))")
 
@@ -135,6 +67,9 @@ function collate_data2(;twin::Real=0.1, niter::Integer=1)
                 tmp[key * "_" * name] = zeros(niter)
             end
 
+            tmp["ird"] = zeros(niter)
+            tmp["ird_30"] = zeros(niter)
+
             for j in 1:niter
 
                 status_sim = simulate_relay_status(pred)
@@ -150,16 +85,18 @@ function collate_data2(;twin::Real=0.1, niter::Integer=1)
                 end
 
                 hi_name = "xf_q"*string(npct)
-                ad = assess(tmp[hi_name], tmp["xf_q1"], ird)
-                d[type]["ird"][k] = mean(ad)
-
-                for q in 1:npct
-                    name = "q" * string(q)
-                    d[type]["xf_"*name][:,k] .= vec(mean(tmp["xf_"*name], dims=2))
-                    d[type][key * "_" * name][k] = mean(tmp[key * "_" * name])
-                end
-
+                tmp["ird"][j] = ird(tmp[hi_name][:,j], tmp["xf_q1"][:,j])
+                tmp["ird_30"][j] = ird(tmp[hi_name][end-29:end,j], tmp["xf_q1"][end-29:end,j])
             end
+
+            for q in 1:npct
+                name = "q" * string(q)
+                d[type]["xf_"*name][:,k] .= vec(mean(tmp["xf_"*name], dims=2))
+                d[type][key * "_" * name][k] = mean(tmp[key * "_" * name])
+            end
+
+            d[type]["ird"][k] = mean(tmp["ird"])
+            d[type]["ird_30"][k] = mean(tmp["ird_30"])
 
             elap = time() - t1
             show_progress(k/length(db), 0, "$(type): ", "($(k) of $(length(db)) @ $(elap))")

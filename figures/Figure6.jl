@@ -18,7 +18,7 @@ const FFSPAN = 200
 `twin` - the duration of the time window preceding each target spike over
 which LGN spikes are counted for partitioning
 """
-function collate_data(;twin::Real=0.1)
+function collate_data(;twin::Real=0.1, exclude::Dict{String,Vector{Int}}=PaperUtils.EXCLUDE)
 
     bin_size = 0.001
     npct = 4
@@ -29,7 +29,7 @@ function collate_data(;twin::Real=0.1)
     key = RelayGLM.key_name(RRI)
 
     for (type, ptrn) in tmp
-        exc = copy(PaperUtils.EXCLUDE[type])
+        exc = copy(exclude[type])
         if type == "msequence"
             push!(exc, 102)
         end
