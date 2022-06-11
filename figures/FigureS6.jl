@@ -55,7 +55,7 @@ function make_figure(d)
     rh = [1.0, 1.0, 1.0]
     rs = [0.08, 0.13, 0.13, 0.08]
     cw = [1.0, 1.0, 1.0]
-    cs = [0.08, 0.08, 0.08, 0.05]
+    cs = [0.08, 0.06, 0.06, 0.03]
 
     ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
     ax = permutedims(reshape(ax, 3, 3), (2,1))
@@ -70,7 +70,7 @@ function make_figure(d)
         for j in 1:size(d[stim]["coef"], 2)
 
             # plot_with_error(t, d[stim]["coef"][:,j], d[stim]["coef_err"][:,j], PURPLE, ax[k,j], linewidth=2)
-            ax[k,j].plot(t, d[stim]["coef"][:,j], color=PURPLE, linewidth=2, label="true filter")
+            ax[k,j].plot(t, d[stim]["coef"][:,j], color=PURPLE, linewidth=2, label="generating filter")
             plot_with_error(t, d[stim]["sim"][:,j], d[stim]["sim_err"][:,j], GREEN, ax[k,j], linewidth=2, label="learned filter")
             ax[k,j].plot([t[1], t[end]], [0,0], "--", color="grey", linewidth=1.5, zorder=-10)
             ax[k,j].set_title("Pair " * string(d[stim]["ids"][j]), fontsize=16)
@@ -90,6 +90,9 @@ function make_figure(d)
     h.text(0.5, 0.99, "Gratings", fontsize=18, color=RED, horizontalalignment="center", verticalalignment="top")
     h.text(0.5, 0.67, "Binary white noise", fontsize=18, color=BLUE, horizontalalignment="center", verticalalignment="top")
     h.text(0.5, 0.34, "Awake", fontsize=18, color=GOLD, horizontalalignment="center", verticalalignment="top")
+
+    labels = ["A","B","C","D","E","F","G","H","I"]
+    foreach((cax,lab)->Plot.axes_label(h, cax, lab), permutedims(ax, (2,1)), labels)
 
 end
 

@@ -100,6 +100,40 @@ function collate_data_quick(::Type{T}) where T <: RelayGLM.PerformanceMetric
     return d
 end
 # ============================================================================ #
+function get_efficacy(db, ids)
+    eff = zeros(length(ids))
+    for k in 1:length(ids)
+        ret, lgn, _, _ = get_data(db, id=ids[k])
+        status = wasrelayed(ret, lgn)
+        eff[k] = sum(status) / length(ret)
+    end
+    return eff
+end
+# ============================================================================ #
+function rri(ef::Real, df::Real=1.0)
+    lh = (ef * log(ef) + (1-ef) * log(1-ef))
+    lb = (df - 1) * log(2) # -(1 - df) * log(2)
+    return (lb - lh) / log(2)
+end
+# ============================================================================ #
+function normalize_rri!(d)
+
+    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
+
+    out = Dict{String,Any}()
+
+    for k in keys(d)
+        db = get_database(tmp[k], id -> !in(id, PaperUtils.EXCLUDE[k]))
+        eff = get_efficacy(db, d[k]["ids"])
+        out[k] = eff
+        for model in keys(d[k]["rri"])
+            d[k]["rri"][model] ./= rri.(eff)
+        end
+    end
+
+    return d, out
+end
+# ============================================================================ #
 function make_figure(d::Dict{String,Any}, metric::String="rri"; io::IO=stdout)
 
     names = [("isi", "ISI model"), ("ff", "Retinal\nmodel"), ("fr", "Combined\nmodel")]

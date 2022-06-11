@@ -8,12 +8,12 @@ collate_data() = Figure45.collate_data()
 function make_figure(d::Dict)
 
     h = figure()
-    h.set_size_inches((8,8))
+    h.set_size_inches((9,8))
 
     rh = [1.0, 1.0, 1.0]
     rs = [0.08, 0.1, 0.1, 0.08]
     cw = [1.0, 1.0, 1.0]
-    cs = [0.08, 0.08, 0.08, 0.05]
+    cs = [0.1, 0.08, 0.08, 0.05]
 
     ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
     ax = permutedims(reshape(ax, 3, 3), (2,1))
@@ -73,6 +73,9 @@ function make_figure(d::Dict)
     h.text(0.5, 0.99, "Gratings", fontsize=18, color=RED, horizontalalignment="center", verticalalignment="top")
     h.text(0.5, 0.65, "Binary white noise", fontsize=18, color=BLUE, horizontalalignment="center", verticalalignment="top")
     h.text(0.5, 0.33, "Awake", fontsize=18, color=GOLD, horizontalalignment="center", verticalalignment="top")
+
+    labels = ["A","B","C","D","E","F","G","H","I"]
+    foreach((cax,lab)->Plot.axes_label(h, cax, lab), permutedims(ax, (2,1)), labels)
 
     return h, ax
 end
