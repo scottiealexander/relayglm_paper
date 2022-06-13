@@ -1,5 +1,7 @@
 module FigureS6
 
+# reviewer response figure 1
+
 using PyPlot, StatsBase, RelayGLM, RelayGLM.RelayUtils, PaperUtils
 using DatabaseWrapper, RejectionSampling, Plot, UCDColors, Progress
 

@@ -1,4 +1,4 @@
-module Figure45
+module Figure6_7
 
 using GAPlot, Plot, UCDColors, SimpleStats, DatabaseWrapper, RelayGLM, Progress
 using RelayGLM.RelayISI, PaperUtils, HyperParamsCV
@@ -32,6 +32,8 @@ function filter_by_rri!(d)
 
         deleteat!(d[stim]["ids"], krm)
     end
+
+    rm["awake"] = Int[]
 
     return d, rm
 end

@@ -1,4 +1,4 @@
-module Figure6
+module Figure8
 
 using DatabaseWrapper, RelayGLM, Progress, SpkCore, SimpleStats
 using PaperUtils, UCDColors, Plot, GAPlot

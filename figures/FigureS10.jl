@@ -1,10 +1,10 @@
-module Figure7
+module FigureS10
 
-using Figure6, Plot, GAPlot, SimpleStats, UCDColors, RelayGLM.RelayUtils
+using FigureS3, Plot, GAPlot, SimpleStats, UCDColors, RelayGLM.RelayUtils
 using PyPlot, KernelDensity, StatsBase, Bootstrap, Printf, Statistics
 
 # ============================================================================ #
-collate_data() = Figure6.collate_data(twin=0.1)
+collate_data() = FigureS3.collate_data(twin=0.1, niter=50)
 # ============================================================================ #
 function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(3), twin::Symbol=:all)
 
@@ -41,9 +41,10 @@ function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(
         lo = d[lab]["xf_q1"]
 
         ad = assess(hi[kt,:], lo[kt,:], ird)
-        ac = kde_lscv(ad, boundary=(-0.03, 0.23))
+        # @show(extrema(ad))
+        ac = kde_lscv(ad, boundary=(-0.005, 0.07))
 
-        e = range(0.0, 0.2, length=16)
+        e = range(0.0, 0.07, length=16)
         hst = fit(Histogram, ad, e)
         c = hst.weights ./ (sum(hst.weights) * step(e))
 
@@ -64,7 +65,7 @@ function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(
 
         yc = max(c[kmn], y[km2]) + get_yext(ax[1]) * 0.1
 
-        ax[1].plot(m, yc + offsets[k], "v", markersize=14, color=colors[lab])
+        ax[1].plot(m, yc + offsets[k], "v", markersize=14, color=colors[lab], zorder=10)
 
         ycmax = max(ycmax, yc)
 
@@ -76,18 +77,18 @@ function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(
         absd[:,k] = ad[ks]
     end
 
-    m = median(assess(d["awake"]["xf_q1"], d["awake"]["xf_q2"], ird))
-    ax[1].plot(m, ycmax + offsets[3], "v", markersize=14, color=GOLD)
+    # m = median(assess(d["awake"]["xf_q1"], d["awake"]["xf_q2"], ird))
+    # ax[1].plot(m, ycmax + offsets[3], "v", markersize=14, color=GOLD)
 
     ax[1].legend(frameon=false, fontsize=14, loc="upper right", bbox_to_anchor=(1.1, 1.05))
 
     ax[1].set_xlabel(L"\int{|\mathrm{Q1} - \mathrm{Q4}|}", fontsize=14)
     ax[1].set_ylabel("Density (A.U.)", fontsize=14)
-    ax[1].set_ylim(0, 32)
+    # ax[1].set_ylim(0, 32)
     xl = ax[1].get_xlim()
     ax[1].set_xlim(0.0-(xl[2]-xl[1])*0.12, xl[2])
 
-    ax[1].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.05))
+    ax[1].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.02))
 
     xl = ax[2].get_xlim()
     ax[2].set_xlim(-0.02, xl[2])
@@ -100,7 +101,7 @@ function make_figure(d::Dict{String,Any}; offsets::AbstractVector{<:Real}=zeros(
 
 
     ax[2].set_ylabel("Median \$\\int{|\\mathrm{Q1} - \\mathrm{Q4}|}\$", fontsize=14)
-    ax[2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.02))
+    ax[2].yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.005))
 
     for (k, label) in enumerate(["A","B"])
         Plot.axes_label(hf, ax[k], label)

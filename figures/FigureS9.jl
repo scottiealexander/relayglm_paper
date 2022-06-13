@@ -1,7 +1,9 @@
 module FigureS9
 
+# reviewer response figure 3
+
 using StatsBase, PyPlot, KernelDensity
-using Figure45, UCDColors, Plot, Figure7
+using Figure6_7, UCDColors, Plot
 
 collate_data() = Figure45.collate_data()
 

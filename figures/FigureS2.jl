@@ -1,290 +1,354 @@
 module FigureS2
 
-using PyPlot, Plot, Statistics, SimpleStats, SimpleFitting, UCDColors, Printf
-using GAPlot, DatabaseWrapper, RelayGLM
-import PaperUtils, Figure45
+using RelayGLM, DatabaseWrapper, PaperUtils, Progress, SimpleStats
+import RelayGLM.RelayISI, Figure6
+using PyPlot, Plot, Statistics, ColorTypes, UCDColors
+import JSON
 # ============================================================================ #
-@enum SpikeType AllSpikes TriggeredSpikes NoncardinalSpikes
-const Strmbol = Union{String,Symbol}
-# ============================================================================ #
-collate_data() = Figure45.collate_data();
-# ============================================================================ #
-"""
-`make_figure(d::Dict{String,Any}; force::Bool=false, io::IO=stdout, inc::Symbol=:all, denom::SpikeType=AllSpikes)`
+function collate_data(; extended::Bool=false)
 
-Where `d` is a results dictionary returned by `Figure45.collate_data()`
+    span = 200
+    bin_size = 0.001
 
-See also: `FigureS2.collate_data()`
-"""
-function make_figure(d::Dict{String,Any}; force::Bool=false, io::IO=stdout, inc::Symbol=:all, denom::SpikeType=AllSpikes)
+    db = get_database(:weyand, id -> !in(id, PaperUtils.EXCLUDE["awake"]))
+
+    d45 = open(JSON.parse, joinpath(@__DIR__, "..", "preprocessed_data", "figure45.json"), "r")
+
+    d = Dict{String,Any}()
+
+    d["rri"] = d45["awake"]
+
+    d["ids"] = zeros(Int, length(db))
+
+    if extended
+        d["efficacy"] = zeros(length(db))
+        d["isi"] = zeros(span-2, length(db))
+        d["rh"] = zeros(span, length(db))
+        d["ch_ret"] = zeros(span, length(db))
+        d["ch_lgn"] = zeros(span, length(db))
+    end
+
+    d["rh_lo"] = zeros(span, length(db))
+    d["rh_hi"] = zeros(span, length(db))
+
+    show_progress(0.0, 0, "Awake: ", "(0 of $(length(db)))")
+
+    for k in 1:length(db)
+
+        id = get_id(db[k])
+        ret, lgn, _, _ = get_data(db, k)
+
+        if extended
+            ed, ef = isi_efficacy(ret, lgn, span, 0.002, bin_size)
+
+            rh, mean_ef = rh_filter(ret, lgn, span, bin_size)
+            ch_ret, ch_lgn = ch_filters(ret, lgn, span, span, 24, bin_size)
+
+            if !haskey(d, "isi_labels")
+                d["isi_labels"] = ed[1:end-1] .+ (step(ed)/2)
+            end
+        end
+
+        rh_lo, rh_hi = activity_state(ret, lgn, 0.1, span, bin_size)
+
+        d["ids"][k] = id
+
+        if extended
+            d["efficacy"][k] = mean_ef
+            d["isi"][:,k] .= ef
+            d["rh"][:,k] .= rh
+            d["ch_ret"][:,k] .= ch_ret
+            d["ch_lgn"][:,k] .= ch_lgn
+        end
+
+        d["rh_lo"][:,k] .= rh_lo
+        d["rh_hi"][:,k] .= rh_hi
+
+        show_progress(k/length(db), 0, "Awake: ", "($(k) of $(length(db)))")
+    end
+
+    return d
+end
+# ============================================================================ #
+function make_figure(d::Dict{String,Any})
 
     h = figure()
-    h.set_size_inches((5.5,9.6))
+    h.set_size_inches((9,5.5))
 
-    row_height = [1.0, 1.0, 1.0]
-    row_spacing = [0.08, 0.08, 0.08, 0.06]
-    col_width = [1.0, 0.33]
-    col_spacing = [0.15, 0.06, 0.1]
+    rh = [1.0]
+    rs = [0.1, 0.1]
+    cw = [0.67, 1.0]
+    cs = [0.10, 0.1, 0.03]
 
-    ax = axes_layout(h, row_height=row_height, row_spacing=row_spacing,
-        col_width=col_width, col_spacing=col_spacing)
+    ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
 
     foreach(default_axes, ax)
 
-    for typ in keys(d)
-        if !haskey(d[typ], "contribution") || !haskey(d[typ], "efficacy") || force
-            ids = d[typ]["ids"]
-            d[typ]["efficacy"] = zeros(length(ids))
-            d[typ]["contribution"] = zeros(length(ids))
-            for k in eachindex(ids)
-                ef, cn = get_eff_cont(typ, ids[k])
-                d[typ]["efficacy"][k] = ef
-                d[typ]["contribution"][k] = cn
-            end
-        end
+    t_rh = -0.201:0.001:-0.002
+
+    N = length(d["ids"])
+
+    foreach(["isi","ff","fr"],["black",GREEN,PURPLE],0:2) do field, col, k
+        m = median(d["rri"]["rri"][field])
+        sd = mad(Vector{Float64}(d["rri"]["rri"][field]))
+
+        ax[1].plot(k, m, ".", markersize=18, color=col)
+        ax[1].plot([k, k], [m-sd, m+sd], "-", linewidth=5, color=col)
+
+        ax[1].plot(fill(k, N), d["rri"]["rri"][field], ".", color="gray", markersize=12, alpha=0.6)
     end
 
-    figure_ab(d, ax[1:4], inc=inc, io=io)
-    figure_c(d, ax[5:end], denom=denom, io=io)
+    ax[1].plot(hcat(fill(0, N), fill(1, N))', hcat(d["rri"]["rri"]["isi"], d["rri"]["rri"]["ff"])', "-", color="gray", linewidth=2, alpha=0.6)
+    ax[1].plot(hcat(fill(1, N), fill(2, N))', hcat(d["rri"]["rri"]["ff"], d["rri"]["rri"]["fr"])', "-", color="gray", linewidth=2, alpha=0.6)
+
+    ax[1].set_ylim(0.0, 0.52)
+    ax[1].set_xticks(0:2)
+    ax[1].set_xticklabels(["ISI\nmodel", "Retinal\nmodel", "Combined\nmodel"])
+    ax[1].set_xlim(-0.5, 2.5)
+    ax[1].set_ylabel("\$\\mathcal{I}_{Bernoulli}\$", fontsize=14)
+    ax[1].set_title("Model performance", fontsize=16)
+
+    inset_length = 30
+
+    sax = Figure6.add_subplot_axes(ax[2], [0.08, 0.35, 0.48, 0.6])
+    default_axes(sax)
+    sax.set_yticklabels([])
+    ki = length(t_rh)-inset_length
+    sax.plot([t_rh[ki], t_rh[end]], [0,0], "--", color="black", linewidth=1)
+    sax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.2))
+
+    ax[2].plot([t_rh[1]-0.005, t_rh[end]], [0,0], "--", color="black", linewidth=1)
+    ax[2].set_xlim(t_rh[1] - 0.005, t_rh[end] + 0.008)
+    ax[2].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.05))
+
+    ki = findall(!isequal(200001250), d["ids"])
+
+    mnl, mxl = filter_plot(t_rh, d["rh_lo"], ax[2], sax, GREEN, "Low", inset_length)
+    mnh, mxh = filter_plot(t_rh, d["rh_hi"], ax[2], sax, PURPLE, "High", inset_length)
+    mn = min(mnl, mnh)
+    mx = max(mxl, mxh)
+
+    Figure6.inset_box(t_rh, mn, mx, ax[2], inset_length)
+
+    # k = findfirst(isequal(200001250), d["ids"])
+    # kt = length(t_rh)-inset_length+1:length(t_rh)
+    # sax.plot(t_rh[kt], PaperUtils.normalize(d["rh_lo"])[kt, k], linewidth=1.5, linestyle="--", color=GREEN)
+    # sax.plot(t_rh[kt], PaperUtils.normalize(d["rh_hi"])[kt, k], linewidth=1.5, linestyle="--", color=PURPLE)
+
+    # ax[2].plot(t_rh, PaperUtils.normalize(d["rh_lo"])[:, k], linewidth=1.5, linestyle="--", color=GREEN)
+    # ax[2].plot(t_rh, PaperUtils.normalize(d["rh_hi"])[:, k], linewidth=1.5, linestyle="--", color=PURPLE)
+
+
+    # draw two arrows pointing to the filters learned from pair 200001250, which
+    # is the only pair (so far as I know) that actually had a controled stimulus
+    # which happened to be a grating
+    t = matplotlib.markers.MarkerStyle(marker="\$\\uparrow\$")
+
+    t._transform = t.get_transform().rotate_deg(65)
+    sax.scatter(-0.0085, -0.13, marker=t, s=100, c=reshape(RED, 1, :))
+
+    t._transform = t.get_transform().rotate_deg(-65)
+    sax.scatter(-0.014, -0.062, marker=t, s=100, c=reshape(RED, 1, :))
+
+    ax[2].set_xlabel("Time before spike (seconds)", fontsize=14)
+    ax[2].set_ylabel("Filter weight (A.U.)", fontsize=14)
+    ax[2].legend(frameon=false, fontsize=14, loc="upper right", bbox_to_anchor=[0.83, 1.0])
+    ax[2].set_title("High vs. low activity level", fontsize=16)
+
+    labels = ["A","B"]
+    foreach((k,l)->Plot.axes_label(h, ax[k], l), 1:2, labels)
 
     return h
 end
 # ============================================================================ #
-function figure_ab(d, ax; io::IO=stdout, inc::Symbol=:all)
+function make_extended_figure(d::Dict{String,Any})
 
-    metric = "rri"
-    dg = deepcopy(d["grating"])
-    dm = deepcopy(d["msequence"])
+    h = figure()
+    h.set_size_inches((9,9.5))
 
-    if inc == :common
-        ids = intersect(d["grating"]["ids"], d["msequence"]["ids"])
-        gidx = map(ids) do id
-            findfirst(isequal(id), d["grating"]["ids"])
-        end
-        midx = map(ids) do id
-            findfirst(isequal(id), d["msequence"]["ids"])
-        end
-        dg["ids"] = ids
-        dm["ids"] = ids
-        for key in keys(dg[metric])
-            dg[metric][key] = dg[metric][key][gidx]
-            dm[metric][key] = dm[metric][key][midx]
-        end
-        for key in ["efficacy", "contribution"]
-            dg[key] = dg[key][gidx]
-            dm[key] = dm[key][midx]
-        end
+    rh = [1.0, 1.0, 1.4]
+    rs = [0.06, 0.11, 0.13, 0.06]
+    cw = [1.0, 1.0]
+    cs = [0.10, 0.1, 0.03]
+
+    ax = Plot.axes_layout(h, row_height=rh, row_spacing=rs, col_width=cw, col_spacing=cs)
+
+    foreach(default_axes, ax)
+
+    t_rh = -0.201:0.001:-0.002
+
+    N = length(d["ids"])
+
+    foreach(ax[[1,3,4]]) do cax
+        cax.plot([t_rh[1], t_rh[end]], [0,0], "--", color="black", linewidth=1)
     end
 
-    lab = L"\mathrm{Residual}\ \mathcal{I}_{Bernoulli}"
+    ax[1].plot(t_rh, PaperUtils.normalize(d["rh"]), color="gray", linewidth=1.5)
+    ax[1].plot(t_rh, mean(PaperUtils.normalize(d["rh"]), dims=2), color=GOLD, linewidth=3, label="Population mean (n=$(N))")
+    ax[1].set_xlabel("Time before spike (seconds)", fontsize=14)
+    ax[1].set_ylabel("Filter weight (A.U.)", fontsize=14)
+    ax[1].set_title("RH retinal filter", fontsize=16)
 
-    names = Dict{String,String}("ff"=>"RH", "fr"=>"CH")
+    ax[1].legend(frameon=false, fontsize=14)
 
-    rg, pg, glo, ghi = single_figure(dg, metric, "contribution", "ff", ax[1], ax[2], RED, "Gratings (n=$(length(dg["ids"])))", f3="", z="efficacy")
-    rm, pm, mlo, mhi = single_figure(dm, metric, "contribution", "ff", ax[1], ax[2], BLUE, "Binary white noise (n=$(length(dm["ids"])))",
-        xoffset=0.4, show_legend=true, f3="", z="efficacy")
+    isi_norm = d["isi"] ./ reshape(d["efficacy"], 1, :)
 
-    # ra, pa, alo, ahi = single_figure(d["awake"], metric, "contribution", "ff", ax[1], ax[2], GOLD, "Awake (n=8)", xoffset=0.8, f3="", z="efficacy")
+    ax[2].plot(d["isi_labels"], isi_norm, color="gray", linewidth=1.5)
+    ax[2].plot(d["isi_labels"], mean(isi_norm, dims=2), color=GOLD, linewidth=3, label="Population mean (n=$(N))")
+    ax[2].set_xlabel("Inter-spike interval (seconds)", fontsize=14)
+    ax[2].set_ylabel("Normalized efficacy\n(A.U.)", fontsize=14)
+    ax[2].set_title("ISI-efficacy", fontsize=16)
 
-    ax[1].get_legend().set_bbox_to_anchor([0.02, 1.3])
+    ax[3].plot(t_rh, PaperUtils.normalize(d["ch_ret"]), color="gray", linewidth=1.5)
+    ax[3].plot(t_rh, mean(PaperUtils.normalize(d["ch_ret"]), dims=2), color=GOLD, linewidth=3, label="Population mean (n=$(N))")
+    ax[3].set_xlabel("Time before spike (seconds)", fontsize=14)
+    ax[3].set_ylabel("Filter weight (A.U.)", fontsize=14)
+    ax[3].set_title("CH retinal filter", fontsize=16)
 
-    xl = "Residual contribution"
-    ax[1].set_xlabel(xl, fontsize=14)
+    ax[4].plot(t_rh, PaperUtils.normalize(d["ch_lgn"]), color="gray", linewidth=1.5)
+    ax[4].plot(t_rh, mean(PaperUtils.normalize(d["ch_lgn"]), dims=2), color=GOLD, linewidth=3, label="Population mean (n=$(N))")
+    ax[4].set_xlabel("Time before spike (seconds)", fontsize=14)
+    ax[4].set_ylabel("Filter weight (A.U.)", fontsize=14)
+    ax[4].set_title("CH LGN filter", fontsize=16)
 
-    pre = "RH"
-    ax[1].set_ylabel(lab * " (RH)", fontsize=14)
-    yl = "Residual " * pre
+    foreach(["isi","ff","fr"],["black",GREEN,PURPLE],0:2) do field, col, k
+        m = median(d["rri"]["rri"][field])
+        sd = mad(Vector{Float64}(d["rri"]["rri"][field]))
 
-    ax[2].set_xticks([0.05, 0.7])
-    ax[2].set_xticklabels(["Gratings", "Binary\nwhite noise"], fontsize=10)
+        ax[5].plot(k, m, ".", markersize=18, color=col)
+        ax[5].plot([k, k], [m-sd, m+sd], "-", linewidth=5, color=col)
 
-    println(io, "*"^80)
-    println(io, "$(xl) vs. $(yl)")
-    @printf(io, "\tGratings: R = %.3f, 95%% CI [%.3f, %.3f], p = %.3f\n\tMSequence: R = %.3f, 95%% CI [%.3f, %.3f], p = %.3f\n", rg, glo, ghi, pg, rm, mlo, mhi, pm)
-
-    z = ""#"efficacy"
-
-    rg, pg, glo, ghi = single_figure(dg, metric, "contribution", "fr", ax[3], ax[4], RED, "Gratings", f3="ff", z=z)
-    rm, pm, mlo, mhi = single_figure(dm, metric, "contribution", "fr", ax[3], ax[4], BLUE, "Binary white noise",
-        xoffset=0.4, show_legend=false, f3="ff", z=z)
-
-    # ra, pa, alo, ahi = single_figure(d["awake"], metric, "contribution", "fr", ax[3], ax[4], GOLD, "Awake",
-    #     xoffset=0.8, show_legend=false, f3="ff", z=z)
-
-    ax[3].set_ylim(-0.007, 0.09)
-
-    xl = isempty(z) ? "Contribution" : "Residual contribution"
-    ax[3].set_xlabel(xl, fontsize=14)
-
-    yl = isempty(z) ? "" : "Residual "
-
-    ax[3].set_ylabel(yl * "\$\\Delta \\mathcal{I}_{Bernoulli}\$ (CH - RH)", fontsize=14)
-    yl = yl * "CH - RH"
-
-    ax[4].set_xticks([0.05, 0.7])
-    ax[4].set_xticklabels(["Gratings", "Binary\nwhite noise"], fontsize=10)
-
-    println(io, "*"^80)
-    println(io, "$(xl) vs. $(yl)")
-    @printf(io, "\tGratings: R = %.3f, 95%% CI [%.3f, %.3f], p = %.3f\n\tMSequence: R = %.3f, 95%% CI [%.3f, %.3f], p = %.3f\n", rg, glo, ghi, pg, rm, mlo, mhi, pm)
-
-
-     foreach(ax[[1,3]], ["A","B"]) do cax, lab
-        Plot.axes_label(cax.figure, cax, lab)
+        ax[5].plot(fill(k, N), d["rri"]["rri"][field], ".", color="gray", markersize=12, alpha=0.6)
     end
 
+    ax[5].plot(hcat(fill(0, N), fill(1, N))', hcat(d["rri"]["rri"]["isi"], d["rri"]["rri"]["ff"])', "-", color="gray", linewidth=2, alpha=0.6)
+    ax[5].plot(hcat(fill(1, N), fill(2, N))', hcat(d["rri"]["rri"]["ff"], d["rri"]["rri"]["fr"])', "-", color="gray", linewidth=2, alpha=0.6)
+
+    ax[5].set_ylim(0.0, 0.5)
+    ax[5].set_xticks(0:2)
+    ax[5].set_xticklabels(["ISI\nmodel", "Retinal\nmodel", "Combined\nmodel"])
+    ax[5].set_xlim(-0.5, 2.5)
+    ax[5].set_ylabel("\$\\mathcal{I}_{Bernoulli}\$", fontsize=14)
+    ax[5].set_title("Model performance", fontsize=16)
+
+    inset_length = 30
+
+    sax = Figure6.add_subplot_axes(ax[6], [0.2, 0.4, 0.45, 0.6])
+    default_axes(sax)
+    sax.set_yticklabels([])
+    ki = length(t_rh)-inset_length
+    sax.plot([t_rh[ki], t_rh[end]], [0,0], "--", color="black", linewidth=1)
+    sax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.5))
+
+    ax[6].plot([t_rh[1], t_rh[end]], [0,0], "--", color="black", linewidth=1)
+
+    mnl, mxl = filter_plot(t_rh, d["rh_lo"], ax[6], sax, GREEN, "Low", inset_length)
+    mnh, mxh = filter_plot(t_rh, d["rh_hi"], ax[6], sax, PURPLE, "High", inset_length)
+    mn = min(mnl, mnh)
+    mx = max(mxl, mxh)
+
+    Figure6.inset_box(t_rh, mn, mx, ax[6], inset_length)
+
+    ax[6].set_xlabel("Time before spike (seconds)", fontsize=14)
+    ax[6].set_ylabel("Filter weight (A.U.)", fontsize=14)
+    ax[6].legend(frameon=false, fontsize=14)
+    ax[6].set_title("High vs. low activity level", fontsize=16)
+
+    resized_axes(ax[5], [0,0], [-.1, 0])
+    resized_axes(ax[6], [-0.08,0], [0,0])
+
+    labels = ["A","B","C","D","E","F"]
+    foreach((k,l)->Plot.axes_label(h, ax[k], l), 1:6, labels)
+
+end
+# ============================================================================ #
+function resized_axes(ax, d0, d1)
+    bbox = ax.get_position()
+    p0 = bbox.p0 .+ d0
+    p1 = bbox.p1 .+ d1
+    bbox.update_from_data_xy([p0, p1], ignore=true)
+    ax.set_position(bbox)
     return ax
 end
 # ============================================================================ #
-function figure_c(d::Dict, ax; denom::SpikeType=AllSpikes, io::IO=stdout)
+function filter_plot(t, xf, ax, sax, col, label, inset_length)
 
-    metric = "rri"
+    light_col, _ = Plot.shading_color(col, 4.0)
+    tmp = PaperUtils.normalize(xf)
+    ax.plot(t, tmp, linewidth=1.5, color=light_col)
+    ax.plot(t, mean(tmp, dims=2), linewidth=3.5, color=col, label=label, zorder=100)
 
-    colors = Dict("grating"=>RED, "msequence"=>BLUE)
-    labels = Dict("grating"=>"Gratings", "msequence"=>"Binary white noise")
-    offsets = Dict("grating"=>0, "msequence"=>0.4)
+    mn, mx = 0, 0
 
-    println("*"^80)
-    println("Non-cardinal burst spikes (%) vs. CH - RH")
-
-    for k in ["msequence", "grating"]
-
-        burst = get_burst_percent(d, k, denom)
-
-        di = d[k][metric]["fr"] .- d[k][metric]["ff"]
-
-        N = length(d[k]["ids"])
-
-        _, lo, hi = GAPlot.cor_plot(burst, di, ax=ax, color=colors[k], label=labels[k] * " (n=$(N))", xoffset=offsets[k], sep=0.05)
-
-        r, p = SimpleStats.cor_permutation_test(burst, di, method=:spearman)
-
-        print(io, "\t", titlecase(k), ": ")
-        @printf(io, "R = %.3f, 95%% CI [%.3f, %.3f], p = %.3f\n", r, lo, hi, p)
+    if inset_length > 0
+        ki = length(t)-inset_length+1:length(t)
+        sax.plot(t[ki], tmp[ki,:], linewidth=1.5, color=light_col)
+        sax.plot(t[ki], mean(tmp[ki,:], dims=2), linewidth=3.5, color=col, label=label, zorder=100)
+        mn, mx = extrema(tmp[ki,:]) .* 1.05
     end
 
-    xlab = denom == AllSpikes ? "Non-cardinal burst spikes (%)" : "% of triggered spikes in bursts"
-
-    ax[1].set_xlabel(xlab, fontsize=14)
-    ax[1].set_ylabel(L"\Delta \mathcal{I}_{Bernoulli}\ \mathrm{(CH - RH)}", fontsize=14)
-
-    # ax[2].set_xticks([0, 0.6])
-    # ax[2].set_xticklabels(["Gratings", "Binary\nwhite noise"], fontsize=12)
-    ax[2].set_xticks([0.05, 0.7])
-    ax[2].set_xticklabels(["Gratings", "Binary\nwhite noise"], fontsize=10)
-    ax[2].plot(ax[2].get_xlim(), [0, 0], "--", color="black", linewidth=1.5)
-
-    ax[1].set_ylim(-0.007, 0.09)
-
-    Plot.axes_label(ax[1].figure, ax[1], "C")
+    return mn, mx
 end
 # ============================================================================ #
-function fetch_data(d::Dict, f1::String, f2::String="")::Vector{Float64}
-    if isempty(f2)
-        return d[f1]
-    else
-        if eltype(d[f1][f2]) <: Tuple
-            return getfield.(d[f1][f2], 1)
-        else
-            return d[f1][f2]
-        end
-    end
-    return Float64[]
+function isi_efficacy(ret, lgn, span, sigma, bin_size)
+
+    isi, status = RelayISI.spike_status(ret, lgn)
+    edges, eff = RelayISI.get_eff(isi, status, 1:length(isi), sigma, bin_size, span * bin_size)
+
+    return edges, eff
 end
 # ============================================================================ #
-function single_figure(d, metric::String, f1::String, f2::String, ax1, ax2, color, label::String;
-    sep::Real=0.05, xoffset::Real=0.0, show_legend::Bool=false, f3::String="", z::String="")
+function rh_filter(ret, lgn, span, bin_size)
 
-    ax2.set_xlim(-0.05, 0.8)
-    ax2.plot(ax2.get_xlim(), [0.0, 0.0], "--", color="black", linewidth=1.0)
+    response = wasrelayed(ret, lgn)
 
-    d1 = fetch_data(d, f1)
-    d2 = fetch_data(d, metric, f2)
+    lm = 2.0 .^ range(1, 12, length=8)
 
-    if isempty(f3)
-        y = d2
-    else
-        d3 = fetch_data(d, metric, f3)
-        y = d2 .- d3
-    end
+    ps = PredictorSet()
+    ps[:retina] = Predictor(ret, ret, DefaultBasis(length=span, offset=2, bin_size=bin_size))
+    glm = GLM(ps, response, SmoothingPrior, [lm])
 
-    if !isempty(z)
-        zd = fetch_data(d, z)
+    res = cross_validate(RRI, Binomial, Logistic, glm, nfold=10, shuffle_design=true)
 
-        b, m = line_fit(zd, d1)
-        xc = d1 .- (zd.*m .+ b)
-
-        b, m = line_fit(zd, y)
-        yc = y .- (zd.*m .+ b)
-
-        # spearman cor
-        val, lo, hi = GAPlot.cor_plot(xc, yc, ax=[ax1,ax2], color=color, label=label, xoffset=xoffset, sep=0.05, method=:spearman)
-        _, p = SimpleStats.cor_permutation_test(xc, yc)
-    else
-        _, lo, hi = GAPlot.cor_plot(d1, y, ax=[ax1,ax2], color=color, label=label, xoffset=xoffset, sep=0.05)
-        val, p = SimpleStats.cor_permutation_test(d1, y, method=:spearman)
-    end
-
-    if show_legend
-        ax1.legend(frameon=true, loc="upper left", bbox_to_anchor=[0.45, 1.25], fontsize=12)
-    end
-
-    return (val, p, lo, hi)
+    return get_coef(res, :retina), sum(response) / length(ret)
 end
 # ============================================================================ #
-function get_burst_percent(d::Dict, type::String, denom::SpikeType=NoncardinalSpikes)
+function ch_filters(ret, lgn, ffspan, fbspan, fbnb, bin_size)
 
-    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)",
-        "msequence" => "msequence", "awake" => :weyand)
+    response = wasrelayed(ret, lgn)
 
-    db = get_database(tmp[type], id -> !in(id, PaperUtils.EXCLUDE[type]))
+    lm = 2.0 .^ range(-3.5, 3, length=5)
 
-    N = length(d[type]["ids"])
-    burst_pct = fill(NaN, N)
+    ps = PredictorSet()
+    ps[:retina] = Predictor(ret, ret, CosineBasis(length=Int(ffspan), offset=2, nbasis=16, b=10, ortho=false, bin_size=bin_size))
+    ps[:lgn] = Predictor(lgn, ret, CosineBasis(length=Int(fbspan), offset=2, nbasis=Int(fbnb), b=8, ortho=false, bin_size=bin_size))
 
-    for id in d[type]["ids"]
-        ret, lgn, _, _ = get_data(db, id=id)
+    glm = GLM(ps, response, RidgePrior, [lm])
+    res = cross_validate(RRI, Binomial, Logistic, glm, nfold=10, shuffle_design=true)
 
-        # make sure burst_pct is in the same order as the data Dict
-        k = findfirst(isequal(id), d[type]["ids"])
-
-        # indicies of all burst spikes (Vector{Vector{Int}}) so length(kb)
-        # is the number of bursts, and kb[k] are the indicies of the spikes
-        # that comprise the k'th burst, thus length(kb[k]) is the number of
-        # spikes in the k'th burst
-        kb = PaperUtils.burst_spikes(lgn, 0.004, 0.1)
-
-        if denom == AllSpikes || denom == NoncardinalSpikes
-            # for number of *non-cardinal* burst spikes we subtract 1 from the
-            # total number of spikes in the burst, otherwise just count em' all
-            p = denom == AllSpikes ? 0 : 1
-            nnc = map(x->length(x) - p, kb)
-
-            burst_pct[k] = (sum(nnc) / length(lgn)) * 100.0
-
-        elseif denom == TriggeredSpikes
-
-            # indicies of all triggered lgn spikes
-            ktrg = PaperUtils.contribution(ret, lgn)
-
-            # indicies of all non-cardinal burst spikes
-            knc = vcat(map(x->x[2:end], kb)...)
-
-            # number of non-cardinal burst spikes that were triggered
-            nnct = sum(in(ktrg), knc)
-            burst_pct[k] = (nnct / length(ktrg)) * 100.0
-        end
-
-    end
-
-    return burst_pct
+    return get_coef(res, :retina), get_coef(res, :lgn)
 end
 # ============================================================================ #
-function get_eff_cont(typ, id)
-    tmp = Dict{String,Strmbol}("grating" => "(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
-    db = get_database(tmp[typ], id -> !in(id, PaperUtils.EXCLUDE[typ]))
-    ret, lgn, _, _ = get_data(db; id=id)
-    return sum(wasrelayed(ret, lgn)) / length(ret), length(PaperUtils.contribution(ret, lgn)) / length(lgn)
+function activity_state(ret, lgn, twin, span, bin_size)
+
+    klo, khi = Figure6.rate_split(ret, lgn, round(Int, twin / bin_size), 2)
+
+    lo = run_one(klo, ret, lgn, span, bin_size)
+    hi = run_one(khi, ret, lgn, span, bin_size)
+
+    return get_coef(lo, :retina), get_coef(hi, :retina)
+end
+# ============================================================================ #
+function run_one(kuse::AbstractVector{<:Integer}, ret::AbstractVector{<:Real}, lgn::AbstractVector{<:Real}, span, bin_size::Real)
+
+    response = wasrelayed(ret[kuse], lgn)
+
+    ps = PredictorSet()
+    ps[:retina] = Predictor(ret, ret[kuse], CosineBasis(length=span, offset=2, nbasis=16, b=10, ortho=false, bin_size=bin_size))
+    lm = 2.0 .^ range(-3.5, 3, length=5)
+    glm = GLM(ps, response, RidgePrior, [lm])
+
+    return cross_validate(RRI, Binomial, Logistic, glm, nfold=10, shuffle_design=true)
 end
 # ============================================================================ #
 end
