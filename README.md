@@ -66,50 +66,57 @@ d3 = Figure3.collate_data()
 Figure3.make_figure(d3, 208)
 
 # ============================================================================ #
-# recreate figures 4 & 5
-using Figure45
+# recreate figure 4
+using Figure4
 
-d45 = Figure45.collate_data()
+d4 = Figure4.collate_data()
 
-Figure45.make_figure(d45)
+Figure4.make_figure(d4)
+# ============================================================================ #
+# recreate figure 5
+using Figure5
+
+d5 = Figure5.collate_data()
+
+Figure5.make_figure(d5)
+# ============================================================================ #
+# recreate figures 6 & 7
+using Figure6_7
+
+d67 = Figure6_7.collate_data()
+
+Figure6_7.make_figure(d67)
 
 # ============================================================================ #
-# recreate figure 6
-using Figure6
+# recreate figure 8
+using Figure8
 
 # we can specify the time window durations to use for RGC spike partitioning
 # here we use 100 ms (or 0.1 sec) which is what the Figure6 in the paper uses
-d6 = Figure6.collate_data(twin=0.1)
+d8 = Figure8.collate_data(twin=0.1)
 
-Figure6.make_figure(d)
+Figure8.make_figure(d8)
 
 # ============================================================================ #
-# recreate figure 7
-using Figure7
+# recreate figure 9
+using Figure9
 
 # NOTE: the data for Figures 6 and 7 are the same, so if you just ran the
 # analysis for figure 6 you can just use the following:
-d7 = d6
+d9 = d8
 
-# otherwise...
-d7 = Figure7.collate_data()
+# # otherwise...
+# d9 = Figure9.collate_data()
 
-Figure7.make_figure(d7)
+Figure9.make_figure(d8)
 
 # ============================================================================ #
 # recreate figure S1
 using FigureS1
 
-ds1 = FigureS1.collate_data()
-FigureS1.make_figure(ds1)
-
-# ============================================================================ #
-# recreate figure S2
-using FigureS2
-
-# NOTE: the data for Figures 4/5 and S1 are the same, so if you just ran the
-# analysis for figures 4/5 you can just use the following:
-ds2 = d45
+# NOTE: the data for Figures 6\7 and S1 are the same, so if you just ran the
+# analysis for figures 6\7 you can just use the following:
+ds1 = d67
 
 # otherwise...
 ds2 = FigureS2.collate_data()
@@ -117,11 +124,20 @@ ds2 = FigureS2.collate_data()
 FigureS2.make_figure(ds2)
 
 # ============================================================================ #
+# recreate figure S2
+using FigureS2
+
+ds2 = FigureS2.collate_data()
+FigureS2.make_figure(ds2)
+
+# ============================================================================ #
 # recreate figure S3
 using FigureS3
 
-ds3 = FigureS3.collate_data()
-FigureS3.make_figure(ds4)
+# NOTE: in the paper GLM models are simulated for 50 iterations, but that takes
+# quite some time, here we'll just use 5 to speed things up
+ds3 = FigureS3.collate_data(niter=5)
+FigureS3.make_figure(ds3)
 
 # ============================================================================ #
 # recreate figure S4

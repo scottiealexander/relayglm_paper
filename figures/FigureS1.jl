@@ -7,7 +7,7 @@ import PaperUtils, Figure6_7
 @enum SpikeType AllSpikes TriggeredSpikes NoncardinalSpikes
 const Strmbol = Union{String,Symbol}
 # ============================================================================ #
-collate_data() = Figure45.collate_data();
+collate_data() = Figure6_7.collate_data();
 # ============================================================================ #
 """
 `make_figure(d::Dict{String,Any}; force::Bool=false, io::IO=stdout, inc::Symbol=:all, denom::SpikeType=AllSpikes)`
