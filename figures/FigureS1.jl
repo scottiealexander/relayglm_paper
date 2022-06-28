@@ -1,4 +1,4 @@
-module FigureS2
+module FigureS1
 
 using PyPlot, Plot, Statistics, SimpleStats, SimpleFitting, UCDColors, Printf
 using GAPlot, DatabaseWrapper, RelayGLM

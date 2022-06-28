@@ -10,7 +10,7 @@ const Strmbol = Union{String,Symbol}
 # ============================================================================ #
 function collate_data()
     return open(JSON.parse,
-        joinpath(@__DIR__, "..", "preprocessed_data", "figure45.json"), "r")
+        joinpath(@__DIR__, "..", "preprocessed_data", "figure6_7.json"), "r")
 end
 # ============================================================================ #
 # remove all pairs whose I_{Bernoulli} (averaged across models) is below the median

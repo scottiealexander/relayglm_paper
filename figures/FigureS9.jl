@@ -2,10 +2,10 @@ module FigureS9
 
 # reviewer response figure 3
 
-using StatsBase, PyPlot, KernelDensity
-using Figure6_7, UCDColors, Plot
+using StatsBase, PyPlot, KernelDensity, Printf
+using Figure6_7, Figure9, UCDColors, Plot
 
-collate_data() = Figure45.collate_data()
+collate_data() = Figure6_7.collate_data()
 
 function make_figure(d::Dict)
 
@@ -27,8 +27,9 @@ function make_figure(d::Dict)
     edges = -0.05:0.05:0.5
 
     for (k, stim) in enumerate(["grating", "msequence", "awake"])
+        @printf("%s:\n", uppercase(stim))
         for (j, model) in enumerate(["isi", "ff", "fr"])
-
+            @printf("  %s (mean, median, min, max):\n", uppercase(model))
             rri = Vector{Float64}(d[stim]["rri"][model])
 
             hst = fit(Histogram, rri, edges)
@@ -37,7 +38,7 @@ function make_figure(d::Dict)
 
             c = hst.weights ./ (sum(hst.weights) * step(edges))
 
-            x, y = Figure7.hist_points(edges, c)
+            x, y = Figure9.hist_points(edges, c)
             ax[k,j].plot(x, y, color=colors[stim], linewidth=1)
 
             path = matplotlib.path.Path(hcat(x, y))
@@ -53,6 +54,8 @@ function make_figure(d::Dict)
             yl = ax[k,j].get_ylim()
             md = median(rri)
             ax[k,j].plot([md, md], yl, "--", color="grey", linewidth=2, label="median")
+
+            @printf("\t%0.3f & %0.3f & %0.3f & %0.3f\n\n", mean(rri), md, minimum(rri), maximum(rri))
         end
     end
 

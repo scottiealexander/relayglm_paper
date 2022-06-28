@@ -1,7 +1,7 @@
 module FigureS2
 
 using RelayGLM, DatabaseWrapper, PaperUtils, Progress, SimpleStats
-import RelayGLM.RelayISI, Figure6
+import RelayGLM.RelayISI, Figure8
 using PyPlot, Plot, Statistics, ColorTypes, UCDColors
 import JSON
 # ============================================================================ #
@@ -12,7 +12,7 @@ function collate_data(; extended::Bool=false)
 
     db = get_database(:weyand, id -> !in(id, PaperUtils.EXCLUDE["awake"]))
 
-    d45 = open(JSON.parse, joinpath(@__DIR__, "..", "preprocessed_data", "figure45.json"), "r")
+    d45 = open(JSON.parse, joinpath(@__DIR__, "..", "preprocessed_data", "figure6_7.json"), "r")
 
     d = Dict{String,Any}()
 
@@ -110,7 +110,7 @@ function make_figure(d::Dict{String,Any})
 
     inset_length = 30
 
-    sax = Figure6.add_subplot_axes(ax[2], [0.08, 0.35, 0.48, 0.6])
+    sax = Figure8.add_subplot_axes(ax[2], [0.08, 0.35, 0.48, 0.6])
     default_axes(sax)
     sax.set_yticklabels([])
     ki = length(t_rh)-inset_length
@@ -128,7 +128,7 @@ function make_figure(d::Dict{String,Any})
     mn = min(mnl, mnh)
     mx = max(mxl, mxh)
 
-    Figure6.inset_box(t_rh, mn, mx, ax[2], inset_length)
+    Figure8.inset_box(t_rh, mn, mx, ax[2], inset_length)
 
     # k = findfirst(isequal(200001250), d["ids"])
     # kt = length(t_rh)-inset_length+1:length(t_rh)
@@ -233,7 +233,7 @@ function make_extended_figure(d::Dict{String,Any})
 
     inset_length = 30
 
-    sax = Figure6.add_subplot_axes(ax[6], [0.2, 0.4, 0.45, 0.6])
+    sax = Figure8.add_subplot_axes(ax[6], [0.2, 0.4, 0.45, 0.6])
     default_axes(sax)
     sax.set_yticklabels([])
     ki = length(t_rh)-inset_length
@@ -247,7 +247,7 @@ function make_extended_figure(d::Dict{String,Any})
     mn = min(mnl, mnh)
     mx = max(mxl, mxh)
 
-    Figure6.inset_box(t_rh, mn, mx, ax[6], inset_length)
+    Figure8.inset_box(t_rh, mn, mx, ax[6], inset_length)
 
     ax[6].set_xlabel("Time before spike (seconds)", fontsize=14)
     ax[6].set_ylabel("Filter weight (A.U.)", fontsize=14)
@@ -331,7 +331,7 @@ end
 # ============================================================================ #
 function activity_state(ret, lgn, twin, span, bin_size)
 
-    klo, khi = Figure6.rate_split(ret, lgn, round(Int, twin / bin_size), 2)
+    klo, khi = Figure8.rate_split(ret, lgn, round(Int, twin / bin_size), 2)
 
     lo = run_one(klo, ret, lgn, span, bin_size)
     hi = run_one(khi, ret, lgn, span, bin_size)

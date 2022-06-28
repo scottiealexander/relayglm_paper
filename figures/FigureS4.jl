@@ -31,7 +31,7 @@ function make_figure(data::Tuple{DSet,DSet}, color_scheme::String="grwhpu")
         else
             pos = [0.35, 0.45, 0.35, 0.55]
         end
-        sax[k] = Figure6.add_subplot_axes(ax[k], pos)
+        sax[k] = Figure8.add_subplot_axes(ax[k], pos)
         default_axes(sax[k])
         sax[k].set_yticklabels([])
         ki = length(t)-30
@@ -62,19 +62,19 @@ function make_figure(data::Tuple{DSet,DSet}, color_scheme::String="grwhpu")
 
             for q in 1:4
                 name = "q" * string(q)
-                mnt, mxt = Figure6.filter_plot(d, t, typ, name, ax[kax], sax[kax], col[q], 30)
+                mnt, mxt = Figure8.filter_plot(d, t, typ, name, ax[kax], sax[kax], col[q], 30)
 
                 mn = min(mn, mnt)
                 mx = max(mx, mxt)
             end
 
-            Figure6.inset_box(t, mn, mx, ax[kax], 30)
+            Figure8.inset_box(t, mn, mx, ax[kax], 30)
 
             if k == 1
                 ax[kax].legend(frameon=false, fontsize=14, loc="upper left")
             end
 
-            Figure6.format_filter_plot(ax[kax])
+            Figure8.format_filter_plot(ax[kax])
             ax[kax].set_xlim(t[1]-0.004, ax[kax].get_xlim()[2])
             ax[kax].set_title(titles[typ], fontsize=18, color=colors[typ])
 

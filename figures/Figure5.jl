@@ -14,7 +14,7 @@ const Strmbol = Union{String,Symbol}
 function collate_data(data::Dict=Dict(); exclude::Dict{String,Vector{Int}}=PaperUtils.EXCLUDE)
 
     if isempty(data)
-        data = load("../20211216_hp_cv_pred_all.jld")
+        data = load(joinpath(@__DIR__, "..", "preprocessed_data", "20211216_hp_cv_pred_all.jld"))
     end
 
     tmp = Dict{String,Strmbol}("grating"=>"(?:contrast|area|grating)", "msequence"=>"msequence", "awake"=>:weyand)
