@@ -54,7 +54,7 @@ The code referenced here does **not** actually run the lengthy cross-validation 
 
 The `HyperParamsCV.collate_data()` function takes two optional arguments, a vector of pair IDS and a directory in which to save log files. Omitting the first argument (the vector of ids) will result in all pairs being processed.
 
-### Recreate the figures;
+### Recreate the figures:
 
 ```Julia
 # ============================================================================ #
