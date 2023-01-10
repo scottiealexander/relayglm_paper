@@ -1,6 +1,6 @@
 # relayglm_paper
 
-Code to recreate figures from [Dynamics of temporal integration in the lateral geniculate nucleus](https://github.com/scottiealexander/relayglm_paper.git).
+Code to recreate figures from the paper [Dynamics of temporal integration in the lateral geniculate nucleus](https://www.eneuro.org/content/9/4/ENEURO.0088-22.2022.long). The figures can also be viewed [HERE](https://www.eneuro.org/content/9/4/ENEURO.0088-22.2022/tab-figures-data).
 
 ## Usage
 
